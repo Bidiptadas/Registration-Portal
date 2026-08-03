@@ -1,0 +1,41 @@
+# ──── Python ────
+backend/venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# ──── Node ────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ──── Environment ────
+.env
+.env.local
+.env.*.local
+firebase-service-account.json
+**/firebase-service-account*.json
+
+# ──── IDE ────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ──── Uploads (temp) ────
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ──── Logs ────
+*.log
+npm-debug.log*
+
+# ──── OS ────
+.DS_Store
+Thumbs.db
+desktop.ini
