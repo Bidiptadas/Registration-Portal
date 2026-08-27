@@ -1,204 +1,168 @@
-/**
- * StudentLoginPage — student login form mockup.
- * Adapts dynamically between Blueprint Wireframe and High-Fidelity Mockup modes.
- */
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation, useOutletContext } from 'react-router-dom';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
+import { signIn, signOut } from '../../firebase/authService';
 
 export default function StudentLoginPage() {
   const { isWireframe } = useOutletContext();
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = location.state?.message;
-
-  // Login form maps to 7 fields: Username, College, Reg Number, Email, Phone, Address, OTP
   const [form, setForm] = useState({
-    username: '',
-    college: '',
-    registration_number: '',
     email: '',
-    phone: '',
-    address: '',
-    otp: ''
+    password: '',
   });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const handleChange = (e) => {
     setForm({
       ...form,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    if (!form.email || !form.password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
     setLoading(true);
-
     try {
-      // Simulate validation & login workflow
-      if (
-        !form.username ||
-        !form.college ||
-        !form.registration_number ||
-        !form.email ||
-        !form.phone ||
-        !form.address ||
-        !form.otp
-      ) {
-        throw new Error('All 7 fields are mandatory to verify identity.');
+      const user = await signIn(
+        form.email.trim(),
+        form.password
+      );
+      if (!user.emailVerified) {
+        await signOut();
+        setError(
+          'Your email has not been verified.Please check your email and click the verification link before logging in.'
+        );
+        return;
       }
-
-      // Mock redirect to dashboard on successful verification
-      setTimeout(() => {
-        setLoading(false);
-        navigate('/dashboard');
-      }, 1000);
+      navigate('/dashboard', {
+        replace: true,
+      });
     } catch (err) {
-      setError(err.message || 'Verification failed.');
+      console.error('Login error:', err);
+      switch (err.code) {
+        case 'auth/invalid-credential':
+          setError('Incorrect email or password.');
+          break;
+        case 'auth/user-not-found':
+          setError('No account exists with this email.');
+          break
+        case 'auth/wrong-password':
+          setError('Incorrect password.');
+          break;
+        case 'auth/invalid-email':
+          setError('Please enter a valid email address.');
+          break;
+        case 'auth/too-many-requests':
+          setError(
+            'Too many login attempts. Please try again later.'
+          );
+          break;
+        case 'auth/network-request-failed':
+          setError(
+            'Network error. Please check your internet connection.'
+          );
+          break;
+        default:
+          setError(
+            err.message || 'Login failed. Please try again.'
+          );
+      }
+    } finally {
       setLoading(false);
     }
   };
-
-  const headerClass = 'text-4xl sm:text-5xl md:text-6xl font-black mb-3 text-slate-900 tracking-tight';
-  const subTextClass = 'text-xl sm:text-2xl font-semibold mb-8 text-slate-600';
-
+  const headerClass =
+    'text-4xl sm:text-5xl md:text-6xl font-black mb-3 text-slate-900 tracking-tight';
+  const subTextClass =
+    'text-xl sm:text-2xl font-semibold mb-8 text-slate-600';
   return (
     <div>
-      <h2 className={headerClass}>Student Login</h2>
+      {/* Header */}
+      <h2 className={headerClass}>
+        Student Login
+      </h2>
       <p className={subTextClass}>
-        Please verify your identity using your registration details and email OTP.
+        Log in to participate in Technophite events
       </p>
-
+      {/* Registration Success Message */}
       {successMessage && (
         <div className="mb-6 p-4 text-lg rounded-xl bg-green-50 border-2 border-green-300 text-green-700 font-bold">
           {successMessage}
         </div>
       )}
-
+      {/* Error Message */}
       {error && (
         <div className="mb-6 p-4 text-lg rounded-xl bg-red-50 border-2 border-red-300 text-red-600 font-bold">
           {error}
         </div>
       )}
-
-      <form onSubmit={handleLogin} className="space-y-8">
-        {/* Desktop 2-Column Grid for Login Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
-          {/* Left Column: Credentials & Contact */}
-          <div className="space-y-6">
-            <span className="block text-xl font-black uppercase text-indigo-900 tracking-wide border-b-2 border-indigo-200 pb-2 mb-4">
-              1. Academic & User Identity
-            </span>
-
-            <Input
-              label="Username"
-              name="username"
-              placeholder="e.g. John Doe"
-              value={form.username}
-              onChange={handleChange}
-              required
-            />
-
-            <Input
-              label="College / University"
-              name="college"
-              placeholder="St. Joseph's University"
-              value={form.college}
-              onChange={handleChange}
-              required
-            />
-
-            <Input
-              label="Registration Number"
-              name="registration_number"
-              placeholder="e.g. SJU20261094"
-              value={form.registration_number}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {/* Right Column: Contact & Verification */}
-          <div className="space-y-6">
-            <span className="block text-xl font-black uppercase text-indigo-900 tracking-wide border-b-2 border-indigo-200 pb-2 mb-4">
-              2. Contact & Verification OTP
-            </span>
-
-            <Input
-              label="Registered Email"
-              name="email"
-              type="email"
-              placeholder="e.g. johndoe@sju.edu.in"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-
-            <Input
-              label="Contact Number"
-              name="phone"
-              type="tel"
-              placeholder="e.g. +91 98765 43210"
-              value={form.phone}
-              onChange={handleChange}
-              required
-            />
-
-            <Input
-              label="Residential Address"
-              name="address"
-              placeholder="e.g. 123 MG Road, Bengaluru"
-              value={form.address}
-              onChange={handleChange}
-              required
-            />
-          </div>
+      {/* Login Form */}
+      <form
+        onSubmit={handleLogin}
+        className="space-y-8"
+      >
+        {/* Email */}
+        <Input
+          label="Email Address"
+          name="email"
+          type="email"
+          placeholder="e.g. johndoe@example.com"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        {/* Password */}
+        <Input
+          label="Password"
+          name="password"
+          type="password"
+          placeholder="Enter your password"
+          value={form.password}
+          onChange={handleChange}
+          required
+        />
+        {/* Forgot Password */}
+        <div className="text-right">
+          <Link
+            to="/forgot-password"
+            className="text-lg font-bold text-sky-600 hover:text-sky-500 underline"
+          >
+            Forgot Password?
+          </Link>
         </div>
-
-        {/* Full-width OTP Section */}
-        <div className="pt-4 border-t-2 border-slate-200">
-          <Input
-            label="Email OTP Code"
-            name="otp"
-            type="text"
-            maxLength={6}
-            placeholder="e.g. 583902"
-            value={form.otp}
-            onChange={handleChange}
-            required
-            inputClassName="text-center text-3xl font-black tracking-[0.35em]"
-          />
-        </div>
-
-        {/* Submit Button */}
+        {/* Login Button */}
         <Button
           type="submit"
           size="lg"
           loading={loading}
           fullWidth
-          className="py-5 text-2xl sm:text-3xl font-black rounded-2xl bg-sky-700 hover:bg-sky-600 text-white shadow-xl hover:scale-[1.01] transition-all mt-8"
+          disabled={loading}
+          className="py-5 text-2xl sm:text-3xl font-black rounded-2xl bg-sky-600 hover:bg-sky-500 text-white shadow-xl hover:scale-[1.01] transition-all"
         >
-          Verify & Log In
+          {loading ? 'Logging In...' : 'Log In'}
         </Button>
       </form>
-
-      {/* Navigation Link */}
+      {/* Create Account */}
       <div className="mt-10 text-center text-xl font-bold text-slate-600">
         Don't have an account?{' '}
         <Link
           to="/signup"
-          className="text-sky-600 hover:text-sky-500 underline font-black"
-        >
+          className="text-sky-600 hover:text-sky-500 underline font-black">
           Create Account
         </Link>
       </div>
     </div>
   );
 }
-
