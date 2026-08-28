@@ -42,7 +42,7 @@ export default function StudentLoginPage() {
       if (!user.emailVerified) {
         await signOut();
         setError(
-          'Your email has not been verified.Please check your email and click the verification link before logging in.'
+          'Your email has not been verified.Please check your email and click the verification link before logging in. '
         );
         return;
       }

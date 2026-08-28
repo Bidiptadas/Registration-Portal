@@ -1,6 +1,7 @@
+
 /**
  * StudentSignupPage
- * Student registration using Firebase Authentication.
+ * Student registration using Firebase Authentication + Cloud Firestore.
  */
 
 import { useState } from 'react';
@@ -14,8 +15,15 @@ import {
   signOut,
   verifyEmail,
 } from '../../firebase/authService';
+import authApi from '../../services/authApi';
 
-import { authApi } from '../../services/authApi';
+import {
+  doc,
+  setDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
+
+import { auth, db } from '../../firebase/firebaseConfig';
 
 export default function StudentSignupPage() {
   const { isWireframe } = useOutletContext();
@@ -28,7 +36,7 @@ export default function StudentSignupPage() {
     confirmPassword: '',
     phone: '',
 
-    // Existing registration defaults
+    // Registration defaults
     college: "St. Joseph's University",
     department: 'Computer Applications',
     year: 1,
@@ -47,13 +55,11 @@ export default function StudentSignupPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setError('');
 
     // --------------------------------------------------
     // 1. FULL NAME VALIDATION
     // --------------------------------------------------
-
     const fullName = form.display_name.trim();
 
     if (fullName.length < 2) {
@@ -64,7 +70,6 @@ export default function StudentSignupPage() {
     // --------------------------------------------------
     // 2. EMAIL VALIDATION
     // --------------------------------------------------
-
     const email = form.email.trim().toLowerCase();
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,32 +82,20 @@ export default function StudentSignupPage() {
     // --------------------------------------------------
     // 3. PHONE NUMBER VALIDATION
     // --------------------------------------------------
-
-    // Accepts:
-    // +91 9876543210
-    // +91-9876543210
-    // 9876543210
-    // 09876543210
-
     const phone = form.phone.replace(/[\s-]/g, '');
 
     const phoneRegex = /^(?:\+91|91)?[6-9]\d{9}$/;
 
     if (!phoneRegex.test(phone)) {
-      setError(
-        'Please enter a valid Indian mobile number.'
-      );
+      setError('Please enter a valid Indian mobile number.');
       return;
     }
 
     // --------------------------------------------------
     // 4. PASSWORD VALIDATION
     // --------------------------------------------------
-
     if (form.password.length < 8) {
-      setError(
-        'Password must contain at least 8 characters.'
-      );
+      setError('Password must contain at least 8 characters.');
       return;
     }
 
@@ -119,7 +112,6 @@ export default function StudentSignupPage() {
     // --------------------------------------------------
     // 5. CONFIRM PASSWORD
     // --------------------------------------------------
-
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -129,50 +121,63 @@ export default function StudentSignupPage() {
 
     try {
       // ------------------------------------------------
-      // 6. CREATE FIREBASE ACCOUNT
+      // 6. CREATE FIREBASE AUTHENTICATION ACCOUNT
       // ------------------------------------------------
-
       const user = await signUp(
         email,
         form.password,
         fullName
       );
 
-      // ------------------------------------------------
-      // 7. SEND FIREBASE EMAIL VERIFICATION
-      // ------------------------------------------------
+      console.log('Firebase Auth user created:', user.uid);
 
+      // ------------------------------------------------
+      // 7. SAVE STUDENT DATA
+      // ------------------------------------------------
+      const studentData = {
+        uid: user.uid,
+        display_name: fullName,
+        email,
+        phone,
+        college: form.college,
+        department: form.department,
+        year: Number(form.year),
+        roll_number: form.roll_number,
+        role: 'student',
+        profileImageUrl: '',
+        emailVerified: false,
+      };
+
+      if (auth.isMock) {
+        await authApi.register(studentData);
+      } else {
+        await setDoc(doc(db, 'users', user.uid), {
+          ...studentData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      console.log(
+        'Student successfully saved to Firestore:',
+        user.uid
+      );
+
+      // ------------------------------------------------
+      // 8. SEND EMAIL VERIFICATION
+      // ------------------------------------------------
       await verifyEmail();
 
-      // ------------------------------------------------
-      // 8. GET FIREBASE ID TOKEN
-      // ------------------------------------------------
-
-      const token = await user.getIdToken();
+      console.log('Verification email sent.');
 
       // ------------------------------------------------
-      // 9. SAVE STUDENT DETAILS
+      // 9. SIGN USER OUT
       // ------------------------------------------------
-
-      await authApi.register({
-        ...form,
-        display_name: fullName,
-        email: email,
-        phone: phone,
-        id_token: token,
-        uid: user.uid,
-      });
-
-      // ------------------------------------------------
-      // 10. SIGN USER OUT
-      // ------------------------------------------------
-
       await signOut();
 
       // ------------------------------------------------
-      // 11. REDIRECT TO LOGIN
+      // 10. REDIRECT TO LOGIN
       // ------------------------------------------------
-
       navigate('/login', {
         state: {
           message:
@@ -186,7 +191,7 @@ export default function StudentSignupPage() {
       let message =
         'Registration failed. Please check your details and try again.';
 
-      // Firebase errors
+      // Firebase Authentication errors
       if (err?.code === 'auth/email-already-in-use') {
         message =
           'An account with this email address already exists.';
@@ -199,6 +204,15 @@ export default function StudentSignupPage() {
       } else if (err?.code === 'auth/network-request-failed') {
         message =
           'Network error. Please check your internet connection.';
+      }
+
+      // Firestore errors
+      else if (err?.code === 'permission-denied') {
+        message =
+          'Registration account was created, but Firestore denied saving your details. Please check your Firestore security rules.';
+      } else if (err?.code === 'unavailable') {
+        message =
+          'Firestore is temporarily unavailable. Please check your internet connection and try again.';
       } else if (err?.message) {
         message = err.message;
       }
@@ -228,7 +242,6 @@ export default function StudentSignupPage() {
         Create your account to participate in Technophite events
       </p>
 
-
       {/* ERROR MESSAGE */}
       {error && (
         <div className="mb-6 p-4 text-lg rounded-xl bg-red-50 border-2 border-red-300 text-red-600 font-bold">
@@ -236,10 +249,8 @@ export default function StudentSignupPage() {
         </div>
       )}
 
-
       {/* VERIFICATION INFORMATION */}
       <div className="mb-10 p-6 rounded-2xl bg-indigo-50 border-2 border-indigo-200 text-indigo-900 shadow-sm">
-
         <div className="flex gap-4 items-start">
 
           <span className="text-3xl">
@@ -261,9 +272,7 @@ export default function StudentSignupPage() {
           </div>
 
         </div>
-
       </div>
-
 
       {/* REGISTRATION FORM */}
       <form
@@ -273,7 +282,6 @@ export default function StudentSignupPage() {
 
         {/* TWO COLUMN FORM */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
-
 
           {/* LEFT COLUMN */}
           <div className="space-y-6">
@@ -288,7 +296,6 @@ export default function StudentSignupPage() {
               required
             />
 
-
             {/* EMAIL */}
             <Input
               label="Email Address"
@@ -299,7 +306,6 @@ export default function StudentSignupPage() {
               onChange={handleChange}
               required
             />
-
 
             {/* PHONE */}
             <Input
@@ -314,7 +320,6 @@ export default function StudentSignupPage() {
 
           </div>
 
-
           {/* RIGHT COLUMN */}
           <div className="space-y-6">
 
@@ -328,7 +333,6 @@ export default function StudentSignupPage() {
               onChange={handleChange}
               required
             />
-
 
             {/* CONFIRM PASSWORD */}
             <Input
@@ -345,10 +349,11 @@ export default function StudentSignupPage() {
 
         </div>
 
-
         {/* PASSWORD REQUIREMENTS */}
         <div className="text-sm text-slate-500">
+
           Password must contain at least:
+
           <ul className="list-disc ml-5 mt-1">
             <li>8 characters</li>
             <li>One uppercase letter</li>
@@ -356,8 +361,8 @@ export default function StudentSignupPage() {
             <li>One number</li>
             <li>One special character</li>
           </ul>
-        </div>
 
+        </div>
 
         {/* SUBMIT BUTTON */}
         <Button
@@ -374,7 +379,6 @@ export default function StudentSignupPage() {
         </Button>
 
       </form>
-
 
       {/* LOGIN LINK */}
       <div className="mt-10 text-center text-xl font-bold text-slate-600">
@@ -393,3 +397,4 @@ export default function StudentSignupPage() {
     </div>
   );
 }
+

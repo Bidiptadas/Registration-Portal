@@ -20,11 +20,28 @@ import { getFromStore } from '../services/mockDb';
  */
 export const signUp = async (email, password, displayName) => {
   if (auth.isMock) {
+    const accounts = getFromStore('tp_auth_users') || [];
+    if (accounts.some((account) => account.email === email.toLowerCase())) {
+      const error = new Error('An account with this email address already exists.');
+      error.code = 'auth/email-already-in-use';
+      throw error;
+    }
+
+    const uid = `mock-student-uid-${Date.now()}`;
+    localStorage.setItem(
+      'tp_auth_users',
+      JSON.stringify([
+        ...accounts,
+        { uid, email: email.toLowerCase(), password, displayName },
+      ])
+    );
+
     const fakeUser = {
-      uid: `mock-student-uid-${Date.now()}`,
-      email,
+      uid,
+      email: email.toLowerCase(),
       displayName,
-      getIdToken: async () => `mock-student-token:${email}`,
+      emailVerified: true,
+      getIdToken: async () => `mock-student-token:${email.toLowerCase()}`,
     };
     auth.currentUser = fakeUser;
     if (auth._onAuthChangeCallback) {
@@ -42,16 +59,25 @@ export const signUp = async (email, password, displayName) => {
  */
 export const signIn = async (email, password) => {
   if (auth.isMock) {
-    const role = email.includes('admin') ? 'admin' : 'student';
+    const normalizedEmail = email.trim().toLowerCase();
+    const role = normalizedEmail.includes('admin') ? 'admin' : 'student';
     let displayName = 'Mock Student';
     let uid = 'mock-student-uid';
     if (role === 'student') {
-      const students = getFromStore('tp_students') || [];
-      const student = students.find((s) => s.email.toLowerCase() === email.toLowerCase());
-      if (student) {
-        displayName = student.displayName;
-        uid = student.uid;
+      const accounts = getFromStore('tp_auth_users') || [];
+      const account = accounts.find((item) => item.email === normalizedEmail);
+      if (!account) {
+        const error = new Error('No account exists with this email.');
+        error.code = 'auth/user-not-found';
+        throw error;
       }
+      if (account.password !== password) {
+        const error = new Error('Incorrect password.');
+        error.code = 'auth/wrong-password';
+        throw error;
+      }
+      displayName = account.displayName;
+      uid = account.uid;
     } else {
       displayName = 'Mock Admin';
       uid = 'mock-admin-uid';
@@ -59,9 +85,10 @@ export const signIn = async (email, password) => {
 
     const fakeUser = {
       uid,
-      email,
+      email: normalizedEmail,
       displayName,
-      getIdToken: async () => role === 'admin' ? 'mock-admin-token' : `mock-student-token:${email}`,
+      emailVerified: true,
+      getIdToken: async () => role === 'admin' ? 'mock-admin-token' : `mock-student-token:${normalizedEmail}`,
     };
     auth.currentUser = fakeUser;
     if (auth._onAuthChangeCallback) {

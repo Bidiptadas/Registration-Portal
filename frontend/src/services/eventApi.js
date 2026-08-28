@@ -1,81 +1,341 @@
 /**
- * Event API Service (Mock Mode).
+ * Event Service
+ *
+ * Firebase Firestore implementation.
+ * Handles event CRUD operations and real-time listeners.
  */
-import { getFromStore, saveToStore } from './mockDb';
+
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+} from 'firebase/firestore';
+
+import { db } from '../firebase/firebaseConfig';
+
+const EVENTS_COLLECTION = 'events';
 
 export const eventApi = {
-  getAll: async (params) => {
-    let events = getFromStore('tp_events') || [];
-    if (params?.active_only) {
-      events = events.filter((e) => e.isActive);
+
+  // --------------------------------------------------
+  // GET ALL EVENTS
+  // --------------------------------------------------
+  getAll: async (params = {}) => {
+
+    const eventsRef = collection(db, EVENTS_COLLECTION);
+
+    let snapshot;
+
+    if (params.active_only) {
+
+      const q = query(
+        eventsRef,
+        where('isActive', '==', true)
+      );
+
+      snapshot = await getDocs(q);
+
+    } else {
+
+      snapshot = await getDocs(eventsRef);
     }
+
+    const events = snapshot.docs.map((document) => ({
+      ...document.data(),
+      eventId: document.id,
+    }));
+
     return {
       data: {
         success: true,
         data: {
-          events: events,
+          events,
           total: events.length,
           page: 1,
-          limit: 100,
+          limit: params.limit || 100,
         },
       },
     };
   },
 
+
+  // --------------------------------------------------
+  // GET ONE EVENT
+  // --------------------------------------------------
   getById: async (id) => {
-    const events = getFromStore('tp_events') || [];
-    const event = events.find((e) => e.eventId === id);
-    const heads = getFromStore('tp_heads') || [];
-    const head = heads.find((h) => h.headId === event?.eventHeadId);
+
+    const eventRef = doc(
+      db,
+      EVENTS_COLLECTION,
+      id
+    );
+
+    const snapshot = await getDoc(eventRef);
+
+    if (!snapshot.exists()) {
+
+      throw new Error('Event not found');
+    }
+
+    const event = {
+      ...snapshot.data(),
+      eventId: snapshot.id,
+    };
 
     return {
       data: {
         success: true,
+        data: event,
+      },
+    };
+  },
+
+
+  // --------------------------------------------------
+  // GET EVENT CATEGORIES
+  // --------------------------------------------------
+  getCategories: async () => {
+
+    return {
+      data: {
+        success: true,
+        data: [
+          'technical',
+          'cultural',
+          'sports',
+          'workshop',
+        ],
+      },
+    };
+  },
+
+
+  // --------------------------------------------------
+  // CREATE EVENT
+  // --------------------------------------------------
+  create: async (data) => {
+
+    const eventData = {
+
+      ...data,
+
+      currentRegistrations: 0,
+
+      availableSpots:
+        Number(data.maxParticipants || data.max_participants || 50),
+
+      isActive: true,
+
+      createdAt: serverTimestamp(),
+
+      updatedAt: serverTimestamp(),
+    };
+
+    const eventsRef = collection(
+      db,
+      EVENTS_COLLECTION
+    );
+
+    const document = await addDoc(
+      eventsRef,
+      eventData
+    );
+
+    return {
+      data: {
+        success: true,
+
         data: {
-          ...event,
-          eventHeadName: head ? head.name : 'Unassigned',
-          eventHeadPhone: head ? head.phone : 'N/A',
+          ...eventData,
+          eventId: document.id,
         },
       },
     };
   },
 
-  getCategories: async () => {
-    return { data: { success: true, data: ['technical', 'cultural', 'sports', 'workshop'] } };
-  },
 
-  create: async (data) => {
-    const events = getFromStore('tp_events') || [];
-    const newEvent = {
-      ...data,
-      eventId: `evt-${Date.now()}`,
-      currentRegistrations: 0,
-      availableSpots: data.max_participants || 50,
-      isActive: true,
-    };
-    events.push(newEvent);
-    saveToStore('tp_events', events);
-    return { data: { success: true, data: newEvent } };
-  },
-
+  // --------------------------------------------------
+  // UPDATE EVENT
+  // --------------------------------------------------
   update: async (id, data) => {
-    const events = getFromStore('tp_events') || [];
-    const index = events.findIndex((e) => e.eventId === id);
-    if (index !== -1) {
-      events[index] = { ...events[index], ...data };
-      if (events[index].max_participants) {
-        events[index].availableSpots = events[index].max_participants - events[index].currentRegistrations;
-      }
-      saveToStore('tp_events', events);
+
+    const eventRef = doc(
+      db,
+      EVENTS_COLLECTION,
+      id
+    );
+
+    const snapshot = await getDoc(eventRef);
+
+    if (!snapshot.exists()) {
+
+      throw new Error('Event not found');
     }
-    return { data: { success: true, data: events[index] } };
+
+    const existingEvent = snapshot.data();
+
+    const maxParticipants =
+      Number(
+        data.maxParticipants ??
+        data.max_participants ??
+        existingEvent.maxParticipants ??
+        existingEvent.max_participants ??
+        50
+      );
+
+    const currentRegistrations =
+      Number(
+        existingEvent.currentRegistrations || 0
+      );
+
+    const updatedData = {
+
+      ...data,
+
+      maxParticipants,
+
+      availableSpots:
+        Math.max(
+          0,
+          maxParticipants - currentRegistrations
+        ),
+
+      updatedAt: serverTimestamp(),
+    };
+
+    await updateDoc(
+      eventRef,
+      updatedData
+    );
+
+    const updatedSnapshot =
+      await getDoc(eventRef);
+
+    return {
+      data: {
+        success: true,
+
+        data: {
+          ...updatedSnapshot.data(),
+          eventId: updatedSnapshot.id,
+        },
+      },
+    };
   },
 
+
+  // --------------------------------------------------
+  // DELETE EVENT
+  // --------------------------------------------------
   delete: async (id) => {
-    const events = getFromStore('tp_events') || [];
-    const updated = events.filter((e) => e.eventId !== id);
-    saveToStore('tp_events', updated);
-    return { data: { success: true } };
+
+    const eventRef = doc(
+      db,
+      EVENTS_COLLECTION,
+      id
+    );
+
+    await deleteDoc(eventRef);
+
+    return {
+      data: {
+        success: true,
+      },
+    };
+  },
+
+
+  // --------------------------------------------------
+  // REAL-TIME EVENT LISTENER
+  // --------------------------------------------------
+  subscribe: (callback, params = {}) => {
+
+    const eventsRef = collection(
+      db,
+      EVENTS_COLLECTION
+    );
+
+    let q = eventsRef;
+
+    if (params.active_only) {
+
+      q = query(
+        eventsRef,
+        where('isActive', '==', true)
+      );
+    }
+
+    return onSnapshot(
+      q,
+
+      (snapshot) => {
+
+        const events =
+          snapshot.docs.map((document) => ({
+            ...document.data(),
+            eventId: document.id,
+          }));
+
+        callback(events);
+      },
+
+      (error) => {
+
+        console.error(
+          'Real-time event listener error:',
+          error
+        );
+      }
+    );
+  },
+
+
+  // --------------------------------------------------
+  // REAL-TIME SINGLE EVENT LISTENER
+  // --------------------------------------------------
+  subscribeToEvent: (eventId, callback) => {
+
+    const eventRef = doc(
+      db,
+      EVENTS_COLLECTION,
+      eventId
+    );
+
+    return onSnapshot(
+      eventRef,
+
+      (snapshot) => {
+
+        if (snapshot.exists()) {
+
+          callback({
+            ...snapshot.data(),
+            eventId: snapshot.id,
+          });
+
+        } else {
+
+          callback(null);
+        }
+      },
+
+      (error) => {
+
+        console.error(
+          'Real-time event error:',
+          error
+        );
+      }
+    );
   },
 };
 
