@@ -1,8 +1,3 @@
-/**
- * EventDetailPage
- * Displays event details and handles real-time registration.
- */
-
 import { useEffect, useState } from 'react';
 
 import {
