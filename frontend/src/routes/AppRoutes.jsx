@@ -25,8 +25,10 @@ const StudentDashboard = lazy(() => import('../pages/student/StudentDashboard'))
 const EventsListPage = lazy(() => import('../pages/student/EventsListPage'));
 const EventDetailPage = lazy(() => import('../pages/student/EventDetailPage'));
 const MyRegistrationsPage = lazy(() => import('../pages/student/MyRegistrationsPage'));
-const AssociationMembersPage = lazy(() => import('../pages/student/AssociationMembersPage'));
 const StudentProfilePage = lazy(() => import('../pages/student/StudentProfilePage'));
+const AnnouncementsPage = lazy(() => import('../pages/student/AnnouncementsPage'));
+const HelpDeskPage = lazy(() => import('../pages/student/HelpDeskPage'));
+const ReceiptsPaymentsPage = lazy(() => import('../pages/student/ReceiptsPaymentsPage'));
 
 // ── Admin Pages ──
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
@@ -65,8 +67,10 @@ export default function AppRoutes() {
           <Route path="/events" element={<EventsListPage />} />
           <Route path="/events/:id" element={<EventDetailPage />} />
           <Route path="/my-registrations" element={<MyRegistrationsPage />} />
-          <Route path="/association" element={<AssociationMembersPage />} />
           <Route path="/profile" element={<StudentProfilePage />} />
+          <Route path="/announcements" element={<AnnouncementsPage />} />
+          <Route path="/help-desk" element={<HelpDeskPage />} />
+          <Route path="/receipts-payments" element={<ReceiptsPaymentsPage />} />
         </Route>
 
         {/* ── Admin Routes (Protected + Admin Only) ── */}

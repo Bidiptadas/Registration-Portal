@@ -1,48 +1,20 @@
-/**
- * Admin Route
- *
- * Restricts access to admin-only pages.
- *
- * Access is granted only when:
- * 1. Firebase authentication has finished loading
- * 2. A user is authenticated
- * 3. The authenticated user's Firestore profile
- *    exists in the admins collection
- * 4. The admin profile has role === "admin"
- */
-
 import { Navigate } from 'react-router-dom';
-
 import { useAuth } from '../hooks/useAuth';
-
 import Loader from '../components/common/Loader';
-
-
+import React from 'react';
 export default function AdminRoute({ children }) {
-
   const {
     isAuthenticated,
     isAdmin,
     loading,
+    user,
   } = useAuth();
-
-
-  // ------------------------------------------------
-  // AUTHENTICATION / FIRESTORE STILL LOADING
-  // ------------------------------------------------
-
   if (loading) {
 
     return (
       <Loader fullScreen />
     );
   }
-
-
-  // ------------------------------------------------
-  // USER NOT LOGGED IN
-  // ------------------------------------------------
-
   if (!isAuthenticated) {
 
     return (
@@ -52,12 +24,9 @@ export default function AdminRoute({ children }) {
       />
     );
   }
-
-
-  // ------------------------------------------------
-  // USER LOGGED IN BUT NOT ADMIN
-  // ------------------------------------------------
-
+  if (!user?.emailVerified) {
+    return <Navigate to="/admin/login" replace />;
+  }
   if (!isAdmin) {
 
     return (
@@ -67,11 +36,5 @@ export default function AdminRoute({ children }) {
       />
     );
   }
-
-
-  // ------------------------------------------------
-  // ADMIN VERIFIED
-  // ------------------------------------------------
-
   return children;
 }

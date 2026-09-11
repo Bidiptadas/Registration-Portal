@@ -3,12 +3,14 @@ import { Outlet } from 'react-router-dom';
 import Navbar from '../components/navigation/Navbar';
 import Sidebar from '../components/navigation/Sidebar';
 import Footer from '../components/navigation/Footer';
+import './StudentLayout.css';
 
 export default function StudentLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen relative overflow-x-hidden" style={{ backgroundColor: 'var(--color-background)' }}>
+    <div className={`student-layout${sidebarOpen ? ' student-layout--sidebar-open' : ''}`}>
+      <div className="student-layout__background" aria-hidden="true" />
       {/* Mobile Sidebar Overlay Backdrop */}
       {sidebarOpen && (
         <div
@@ -17,9 +19,9 @@ export default function StudentLayout() {
         />
       )}
       <Sidebar variant="student" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="student-layout__content">
         <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-4 md:p-6">
+        <main className="student-layout__main">
           <Outlet />
         </main>
         <Footer />

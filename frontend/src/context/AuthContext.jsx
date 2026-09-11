@@ -14,77 +14,48 @@ import { db } from '../firebase/firebaseConfig';
 
 import {
   collection,
+  doc,
   query,
   where,
   onSnapshot,
 } from 'firebase/firestore';
 
-
-// --------------------------------------------------
-// CREATE CONTEXT
-// --------------------------------------------------
-
 const AuthContext = createContext(null);
 
-
-// --------------------------------------------------
-// AUTH PROVIDER
-// --------------------------------------------------
-
 export function AuthProvider({ children }) {
-
-  // Firebase Authentication user
   const [user, setUser] = useState(null);
-
-  // Firestore profile
   const [userProfile, setUserProfile] = useState(null);
-
-  // Loading state
   const [loading, setLoading] = useState(true);
-
-  // Admin status
   const [isAdmin, setIsAdmin] = useState(false);
 
-
-  // ------------------------------------------------
-  // AUTH + FIRESTORE LISTENER
-  // ------------------------------------------------
-
   useEffect(() => {
+    console.log('AuthProvider mounted');
 
-    let unsubscribeFirestore = null;
+    let unsubscribeAuth = null;
+    let unsubscribeAdmin = null;
+    let unsubscribeStudent = null;
 
+    const cleanupFirestoreListeners = () => {
+      if (unsubscribeAdmin) {
+        unsubscribeAdmin();
+        unsubscribeAdmin = null;
+      }
 
-    // ------------------------------------------------
-    // FIREBASE AUTH STATE
-    // ------------------------------------------------
+      if (unsubscribeStudent) {
+        unsubscribeStudent();
+        unsubscribeStudent = null;
+      }
+    };
 
-    const unsubscribeAuth = onAuthChange((firebaseUser) => {
-
+    unsubscribeAuth = onAuthChange((firebaseUser) => {
       console.log('=================================');
       console.log('AUTH STATE CHANGED');
       console.log('=================================');
 
-      console.log('Firebase user:', firebaseUser);
-
-
-      // ----------------------------------------------
-      // REMOVE PREVIOUS FIRESTORE LISTENER
-      // ----------------------------------------------
-
-      if (unsubscribeFirestore) {
-
-        unsubscribeFirestore();
-
-        unsubscribeFirestore = null;
-      }
-
-
-      // ----------------------------------------------
-      // USER LOGGED OUT
-      // ----------------------------------------------
+      cleanupFirestoreListeners();
 
       if (!firebaseUser) {
+        console.log('No authenticated Firebase user');
 
         setUser(null);
         setUserProfile(null);
@@ -94,304 +65,165 @@ export function AuthProvider({ children }) {
         return;
       }
 
-
-      // ----------------------------------------------
-      // USER LOGGED IN
-      // ----------------------------------------------
+      console.log('Firebase user:', firebaseUser);
+      console.log('UID:', firebaseUser.uid);
+      console.log('Email:', firebaseUser.email);
+      console.log('Email verified:', firebaseUser.emailVerified);
 
       setUser(firebaseUser);
+      setUserProfile(null);
+      setIsAdmin(false);
       setLoading(true);
-
-
-      console.log('Authenticated user UID:', firebaseUser.uid);
-      console.log('Authenticated email:', firebaseUser.email);
-      console.log(
-        'Email verified:',
-        firebaseUser.emailVerified
-      );
-
-
-      // =================================================
-      // STEP 1: CHECK ADMINS COLLECTION
-      // =================================================
-      //
-      // admins
-      //   └── document
-      //        ├── authUid
-      //        ├── email
-      //        ├── name
-      //        └── role: "admin"
-      //
-      // =================================================
 
       const adminQuery = query(
         collection(db, 'admins'),
         where('authUid', '==', firebaseUser.uid)
       );
 
-
-      let adminFound = false;
-
-      let unsubscribeAdmin = null;
-
-      let unsubscribeStudent = null;
-
-
-      // ------------------------------------------------
-      // ADMIN LISTENER
-      // ------------------------------------------------
-
       unsubscribeAdmin = onSnapshot(
         adminQuery,
 
         (adminSnapshot) => {
-
-          // --------------------------------------------
-          // ADMIN FOUND
-          // --------------------------------------------
+          console.log('=================================');
+          console.log('ADMIN QUERY COMPLETED');
+          console.log('=================================');
 
           if (!adminSnapshot.empty) {
+            const adminDoc = adminSnapshot.docs[0];
+            const adminData = adminDoc.data();
 
-            const adminDoc =
-              adminSnapshot.docs[0];
-
-            const adminData =
-              adminDoc.data();
-
-
-            console.log('=================================');
             console.log('ADMIN PROFILE FOUND');
-            console.log('=================================');
-
-            console.log(
-              'Admin document ID:',
-              adminDoc.id
-            );
-
-            console.log(
-              'Admin data:',
-              adminData
-            );
-
-            console.log(
-              'Admin role:',
-              adminData.role
-            );
-
-
-            // ------------------------------------------
-            // VERIFY ROLE
-            // ------------------------------------------
+            console.log('Admin document ID:', adminDoc.id);
+            console.log('Admin data:', adminData);
 
             if (adminData.role === 'admin') {
-
-              adminFound = true;
-
-
               const adminProfile = {
-
                 ...adminData,
 
-                // Firebase UID
                 uid: firebaseUser.uid,
 
-                // Admin name
+                email:
+                  firebaseUser.email ||
+                  adminData.email ||
+                  '',
+
                 displayName:
                   adminData.name ||
                   firebaseUser.displayName ||
                   '',
 
-                // Firebase email
-                email:
-                  firebaseUser.email,
-
-                // Email verification status
                 emailVerified:
                   firebaseUser.emailVerified,
 
-                // Firestore document ID
                 adminDocumentId:
                   adminDoc.id,
 
-                // Explicit role
                 role: 'admin',
               };
 
-
               setUserProfile(adminProfile);
-
               setIsAdmin(true);
-
               setLoading(false);
 
+              console.log('=================================');
+              console.log('ADMIN VERIFIED');
+              console.log('=================================');
+              console.log('Role:', 'admin');
+              console.log('Is admin:', true);
 
-              console.log(
-                'ADMIN VERIFIED'
-              );
-
-              console.log(
-                'isAdmin:',
-                true
-              );
-
-
-              // ----------------------------------------
-              // ADMIN FOUND
-              // ----------------------------------------
-              //
-              // No need to listen to students.
-              //
-              // ----------------------------------------
-
+              /*
+               * We found the admin.
+               * Student listener is not required.
+               */
               if (unsubscribeStudent) {
-
                 unsubscribeStudent();
-
                 unsubscribeStudent = null;
               }
 
               return;
             }
           }
+          console.log('No admin profile found.');
+          console.log('Checking students collection...');
 
+          unsubscribeStudent = onSnapshot(
+            doc(db, 'users', firebaseUser.uid),
 
-          // =================================================
-          // STEP 2: IF NOT ADMIN, CHECK STUDENTS
-          // =================================================
+            (studentSnapshot) => {
+              console.log('=================================');
+              console.log('STUDENT QUERY COMPLETED');
+              console.log('=================================');
 
-          if (!adminFound) {
-
-            console.log(
-              'No admin profile found.'
-            );
-
-            console.log(
-              'Checking students collection...'
-            );
-
-
-            // --------------------------------------------
-            // STUDENT DOCUMENT
-            // --------------------------------------------
-            //
-            // students/{firebaseUser.uid}
-            //
-            // --------------------------------------------
-
-            const studentRef =
-              query(
-                collection(db, 'students'),
-                where(
-                  'uid',
-                  '==',
+              if (!studentSnapshot.exists()) {
+                console.warn(
+                  'No student profile found for UID:',
                   firebaseUser.uid
-                )
+                );
+
+                setUserProfile(null);
+                setIsAdmin(false);
+                setLoading(false);
+
+                return;
+              }
+
+              const studentData = studentSnapshot.data();
+
+              const role =
+                studentData.role || 'student';
+
+              const studentProfile = {
+                ...studentData,
+
+                uid: firebaseUser.uid,
+
+                email:
+                  firebaseUser.email ||
+                  studentData.email ||
+                  '',
+
+                displayName:
+                  studentData.display_name ||
+                  firebaseUser.displayName ||
+                  '',
+
+                emailVerified:
+                  firebaseUser.emailVerified,
+
+                studentDocumentId:
+                  studentSnapshot.id,
+
+                role,
+              };
+
+              setUserProfile(studentProfile);
+              setIsAdmin(false);
+              setLoading(false);
+
+              console.log('=================================');
+              console.log('STUDENT PROFILE FOUND');
+              console.log('=================================');
+              console.log('Student document ID:', studentDoc.id);
+              console.log('Student data:', studentData);
+              console.log('Role:', role);
+              console.log('Is admin:', false);
+            },
+
+            (error) => {
+              console.error(
+                'Error listening to students collection:',
+                error
               );
 
-
-            // --------------------------------------------
-            // STUDENT LISTENER
-            // --------------------------------------------
-
-            unsubscribeStudent =
-              onSnapshot(
-
-                studentRef,
-
-                (studentSnapshot) => {
-
-                  if (
-                    studentSnapshot.empty
-                  ) {
-
-                    console.warn(
-                      'No student profile found for UID:',
-                      firebaseUser.uid
-                    );
-
-                    setUserProfile(null);
-                    setIsAdmin(false);
-                    setLoading(false);
-
-                    return;
-                  }
-
-
-                  const studentDoc =
-                    studentSnapshot.docs[0];
-
-                  const profileData =
-                    studentDoc.data();
-
-
-                  // --------------------------------------
-                  // STUDENT PROFILE
-                  // --------------------------------------
-
-                  const role =
-                    profileData.role ||
-                    'student';
-
-
-                  const profile = {
-
-                    ...profileData,
-
-                    uid:
-                      firebaseUser.uid,
-
-                    email:
-                      firebaseUser.email,
-
-                    displayName:
-                      profileData.display_name ||
-                      firebaseUser.displayName ||
-                      '',
-
-                    emailVerified:
-                      firebaseUser.emailVerified,
-
-                    role,
-                  };
-
-
-                  setUserProfile(profile);
-
-                  setIsAdmin(false);
-
-                  setLoading(false);
-
-
-                  console.log('=================================');
-                  console.log('STUDENT PROFILE FOUND');
-                  console.log('=================================');
-
-                  console.log(
-                    'Student data:',
-                    profileData
-                  );
-
-                  console.log(
-                    'Role:',
-                    role
-                  );
-
-                  console.log(
-                    'Is admin:',
-                    false
-                  );
-                }
-              );
-          }
+              setUserProfile(null);
+              setIsAdmin(false);
+              setLoading(false);
+            }
+          );
         },
 
-
-        // ----------------------------------------------
-        // ADMIN FIRESTORE ERROR
-        // ----------------------------------------------
-
         (error) => {
-
+         
           console.error(
             'Error listening to admins collection:',
             error
@@ -402,104 +234,50 @@ export function AuthProvider({ children }) {
           setLoading(false);
         }
       );
-
-
-      // ----------------------------------------------
-      // STORE CLEANUP FUNCTION
-      // ----------------------------------------------
-
-      unsubscribeFirestore = () => {
-
-        if (unsubscribeAdmin) {
-          unsubscribeAdmin();
-        }
-
-        if (unsubscribeStudent) {
-          unsubscribeStudent();
-        }
-      };
     });
 
-
-    // ------------------------------------------------
-    // COMPONENT CLEANUP
-    // ------------------------------------------------
-
     return () => {
+      console.log('AuthProvider cleanup');
 
-      unsubscribeAuth();
+      cleanupFirestoreListeners();
 
-      if (unsubscribeFirestore) {
-        unsubscribeFirestore();
+      if (unsubscribeAuth) {
+        unsubscribeAuth();
+        unsubscribeAuth = null;
       }
     };
-
   }, []);
 
-
-  // ------------------------------------------------
-  // LOGOUT
-  // ------------------------------------------------
-
   const logout = async () => {
-
     try {
-
       await signOut();
 
       setUser(null);
       setUserProfile(null);
       setIsAdmin(false);
-
+      setLoading(false);
     } catch (error) {
-
-      console.error(
-        'Logout error:',
-        error
-      );
-
+      console.error('Logout error:', error);
       throw error;
     }
   };
 
-
-  // ------------------------------------------------
-  // REFRESH PROFILE
-  // ------------------------------------------------
-
   const refreshProfile = async () => {
-
+    
     console.log(
       'Profile is synchronized automatically using onSnapshot().'
     );
   };
 
-
-  // ------------------------------------------------
-  // CONTEXT VALUE
-  // ------------------------------------------------
-
   const value = {
-
     user,
-
     userProfile,
-
     isAdmin,
-
     loading,
-
     logout,
-
     refreshProfile,
-
     isAuthenticated: !!user,
   };
-
-
-  // ------------------------------------------------
-  // PROVIDER
-  // ------------------------------------------------
 
   return (
     <AuthContext.Provider value={value}>
@@ -508,10 +286,9 @@ export function AuthProvider({ children }) {
   );
 }
 
-
 export const useAuthContext = () => {
-  const context =
-    useContext(AuthContext);
+  const context = useContext(AuthContext);
+
   if (!context) {
     throw new Error(
       'useAuthContext must be used within an AuthProvider'

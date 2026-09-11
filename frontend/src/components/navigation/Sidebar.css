@@ -1,0 +1,136 @@
+.app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 50;
+  display: flex;
+  width: clamp(15rem, 27vw, 21rem);
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem clamp(1.25rem, 3vw, 2.5rem);
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(8, 31, 42, 0.88);
+  color: #fff;
+  backdrop-filter: blur(14px);
+  transform: translateX(-105%);
+  transition: transform 250ms ease;
+}
+
+.app-sidebar.is-open {
+  transform: translateX(0);
+}
+
+.app-menu-toggle {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  gap: 0.3rem;
+  place-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.app-menu-toggle span {
+  display: block;
+  width: 1.25rem;
+  height: 2px;
+  background: currentColor;
+}
+
+.app-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-sidebar__monogram {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  background: rgba(58, 145, 174, 0.4);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.app-sidebar__brand small,
+.app-sidebar__brand strong {
+  display: block;
+}
+
+.app-sidebar__brand small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.app-sidebar__brand strong {
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.app-sidebar__close {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 1.5rem;
+}
+
+.app-sidebar__links {
+  flex: 1;
+  display: grid;
+  gap: 0.7rem;
+  align-content: start;
+}
+
+.app-sidebar__links a {
+  display: block;
+  padding: 0.8rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.app-sidebar__links a:hover,
+.app-sidebar__links a.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.app-sidebar__logout {
+  width: 100%;
+  padding: 0.8rem 0.85rem;
+  border: 1px solid rgba(255, 120, 120, 0.7);
+  border-radius: 0.9rem;
+  color: #ffb0b0;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.app-sidebar__logout:hover {
+  background: rgba(255, 100, 100, 0.12);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .app-sidebar {
+    width: 100%;
+    transform: translateY(-105%);
+  }
+
+  .app-sidebar.is-open {
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 768px) {
+  .admin-layout--sidebar-open .admin-layout__content {
+    margin-left: clamp(15rem, 27vw, 21rem);
+  }
+}

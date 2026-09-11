@@ -13,9 +13,9 @@ import Button from '../../components/common/Button';
 import {
   signUp,
   signOut,
-  verifyEmail,
 } from '../../firebase/authService';
 import authApi from '../../services/authApi';
+import { normalizeEmail, validatePassword } from '../../utils/authValidation';
 
 import {
   doc,
@@ -70,11 +70,12 @@ export default function StudentSignupPage() {
     // --------------------------------------------------
     // 2. EMAIL VALIDATION
     // --------------------------------------------------
-    const email = form.email.trim().toLowerCase();
+    let email;
+    let createdUser = null;
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
+    try {
+      email = normalizeEmail(form.email);
+    } catch {
       setError('Please enter a valid email address.');
       return;
     }
@@ -94,18 +95,10 @@ export default function StudentSignupPage() {
     // --------------------------------------------------
     // 4. PASSWORD VALIDATION
     // --------------------------------------------------
-    if (form.password.length < 8) {
-      setError('Password must contain at least 8 characters.');
-      return;
-    }
-
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
-
-    if (!passwordRegex.test(form.password)) {
-      setError(
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.'
-      );
+    try {
+      validatePassword(form.password);
+    } catch (validationError) {
+      setError(validationError.message);
       return;
     }
 
@@ -123,19 +116,19 @@ export default function StudentSignupPage() {
       // ------------------------------------------------
       // 6. CREATE FIREBASE AUTHENTICATION ACCOUNT
       // ------------------------------------------------
-      const user = await signUp(
+      createdUser = await signUp(
         email,
         form.password,
         fullName
       );
 
-      console.log('Firebase Auth user created:', user.uid);
+      console.log('Firebase Auth user created:', createdUser.uid);
 
       // ------------------------------------------------
       // 7. SAVE STUDENT DATA
       // ------------------------------------------------
       const studentData = {
-        uid: user.uid,
+        uid: createdUser.uid,
         display_name: fullName,
         email,
         phone,
@@ -151,7 +144,7 @@ export default function StudentSignupPage() {
       if (auth.isMock) {
         await authApi.register(studentData);
       } else {
-        await setDoc(doc(db, 'users', user.uid), {
+        await setDoc(doc(db, 'users', createdUser.uid), {
           ...studentData,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -160,23 +153,16 @@ export default function StudentSignupPage() {
 
       console.log(
         'Student successfully saved to Firestore:',
-        user.uid
+        createdUser.uid
       );
 
       // ------------------------------------------------
-      // 8. SEND EMAIL VERIFICATION
-      // ------------------------------------------------
-      await verifyEmail();
-
-      console.log('Verification email sent.');
-
-      // ------------------------------------------------
-      // 9. SIGN USER OUT
+      // 8. SIGN USER OUT
       // ------------------------------------------------
       await signOut();
 
       // ------------------------------------------------
-      // 10. REDIRECT TO LOGIN
+      // 9. REDIRECT TO LOGIN
       // ------------------------------------------------
       navigate('/login', {
         state: {
@@ -187,6 +173,14 @@ export default function StudentSignupPage() {
 
     } catch (err) {
       console.error('Registration error:', err);
+
+      if (createdUser) {
+        try {
+          await signOut();
+        } catch (signOutError) {
+          console.error('Unable to clean up signup session:', signOutError);
+        }
+      }
 
       let message =
         'Registration failed. Please check your details and try again.';

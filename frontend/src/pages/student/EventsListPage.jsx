@@ -3,9 +3,10 @@
  * Browse and filter all active events in real time.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import eventApi from '../../services/eventApi';
+import registrationApi from '../../services/registrationApi';
 
 import EventCard from '../../components/cards/EventCard';
 
@@ -24,6 +25,8 @@ export default function EventsListPage() {
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState('');
+  const [registrations, setRegistrations] = useState([]);
+  const [filters, setFilters] = useState({ category: '', status: 'all', availability: 'all', sort: 'date' });
 
 
   // --------------------------------------------------
@@ -35,27 +38,15 @@ export default function EventsListPage() {
     setLoading(true);
     setError('');
 
-    const unsubscribe = eventApi.subscribe(
-      (updatedEvents) => {
-
-        setEvents(updatedEvents);
-
-        setFilteredEvents(updatedEvents);
-
-        setLoading(false);
-      },
-      {
-        active_only: true,
-      }
-    );
-
-
-    // IMPORTANT:
-    // Remove Firestore listener when component unmounts.
-
-    return () => {
-      unsubscribe();
-    };
+    Promise.all([
+      eventApi.getAll({ active_only: true }),
+      registrationApi.getMyRegistrations(),
+    ]).then(([eventResponse, registrationResponse]) => {
+      setEvents(eventResponse.data.data.events || []);
+      setRegistrations(registrationResponse.data.data || []);
+    }).catch((loadError) => {
+      setError(loadError.message || 'Unable to load events. Please try again.');
+    }).finally(() => setLoading(false));
 
   }, []);
 
@@ -64,38 +55,32 @@ export default function EventsListPage() {
   // SEARCH EVENTS
   // --------------------------------------------------
 
-  const handleSearch = (query) => {
-
-    const searchQuery =
-      query.trim().toLowerCase();
-
-    if (!searchQuery) {
-
-      setFilteredEvents(events);
-
-      return;
-    }
-
-    const filtered = events.filter((event) => {
-
-      const title =
-        event.title?.toLowerCase() || '';
-
-      const description =
-        event.description?.toLowerCase() || '';
-
-      const category =
-        event.category?.toLowerCase() || '';
-
-      return (
-        title.includes(searchQuery) ||
-        description.includes(searchQuery) ||
-        category.includes(searchQuery)
-      );
+  const handleSearch = useCallback((searchQuery) => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const registeredIds = new Set(registrations.filter((item) => item.status === 'registered').map((item) => item.eventId));
+    const now = new Date();
+    const result = events.filter((event) => {
+      const matchesSearch = [event.title, event.description, event.category, event.venue].some((value) => value?.toLowerCase().includes(normalizedQuery));
+      const deadline = event.registrationDeadline?.toDate ? event.registrationDeadline.toDate() : new Date(event.registrationDeadline);
+      const isClosed = event.isActive === false || (event.registrationDeadline && deadline < now);
+      const spots = event.availableSpots ?? Number(event.maxParticipants || 0) - Number(event.currentRegistrations || 0);
+      const matchesCategory = !filters.category || event.category === filters.category;
+      const matchesStatus = filters.status === 'all' || (filters.status === 'active' && !isClosed) || (filters.status === 'closed' && isClosed);
+      const matchesAvailability = filters.availability === 'all' || (filters.availability === 'available' && spots > 0) || (filters.availability === 'full' && spots <= 0);
+      return matchesSearch && matchesCategory && matchesStatus && matchesAvailability;
+    }).sort((left, right) => {
+      if (filters.sort === 'title') return (left.title || '').localeCompare(right.title || '');
+      if (filters.sort === 'availability') return (right.availableSpots || 0) - (left.availableSpots || 0);
+      const leftDate = left.date?.toDate ? left.date.toDate() : new Date(left.date);
+      const rightDate = right.date?.toDate ? right.date.toDate() : new Date(right.date);
+      return leftDate - rightDate;
     });
+    setFilteredEvents(result.map((event) => ({ ...event, isRegistered: registeredIds.has(event.eventId) })));
+  }, [events, filters, registrations]);
 
-    setFilteredEvents(filtered);
-  };
+  useEffect(() => {
+    handleSearch('');
+  }, [handleSearch]);
 
 
   // --------------------------------------------------
@@ -162,6 +147,16 @@ export default function EventsListPage() {
           className="w-full sm:w-64"
         />
 
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <select value={filters.category} onChange={(event) => setFilters({ ...filters, category: event.target.value })} className="rounded-lg p-2.5 text-sm" aria-label="Filter by category">
+          <option value="">All categories</option>
+          {[...new Set(events.map((event) => event.category).filter(Boolean))].map((category) => <option key={category} value={category}>{category}</option>)}
+        </select>
+        <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })} className="rounded-lg p-2.5 text-sm" aria-label="Filter by status"><option value="all">All statuses</option><option value="active">Open</option><option value="closed">Closed</option></select>
+        <select value={filters.availability} onChange={(event) => setFilters({ ...filters, availability: event.target.value })} className="rounded-lg p-2.5 text-sm" aria-label="Filter by availability"><option value="all">Any availability</option><option value="available">Seats available</option><option value="full">Full events</option></select>
+        <select value={filters.sort} onChange={(event) => setFilters({ ...filters, sort: event.target.value })} className="rounded-lg p-2.5 text-sm" aria-label="Sort events"><option value="date">Sort by date</option><option value="title">Sort by name</option><option value="availability">Sort by seats</option></select>
       </div>
 
 

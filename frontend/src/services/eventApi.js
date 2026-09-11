@@ -15,12 +15,13 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore';
 
 import { db } from '../firebase/firebaseConfig';
+import { auth } from '../firebase/firebaseConfig';
+import { getFromStore, saveToStore } from './mockDb';
 
 const EVENTS_COLLECTION = 'events';
 
@@ -30,6 +31,11 @@ export const eventApi = {
   // GET ALL EVENTS
   // --------------------------------------------------
   getAll: async (params = {}) => {
+
+    if (auth.isMock) {
+      const events = (getFromStore('tp_events') || []).filter((event) => !params.active_only || event.isActive);
+      return { data: { success: true, data: { events, total: events.length, page: 1, limit: params.limit || 100 } } };
+    }
 
     const eventsRef = collection(db, EVENTS_COLLECTION);
 
@@ -72,6 +78,12 @@ export const eventApi = {
   // GET ONE EVENT
   // --------------------------------------------------
   getById: async (id) => {
+
+    if (auth.isMock) {
+      const event = (getFromStore('tp_events') || []).find((item) => item.eventId === id);
+      if (!event) throw new Error('Event not found');
+      return { data: { success: true, data: event } };
+    }
 
     const eventRef = doc(
       db,
@@ -124,6 +136,13 @@ export const eventApi = {
   // --------------------------------------------------
   create: async (data) => {
 
+    if (auth.isMock) {
+      const events = getFromStore('tp_events') || [];
+      const newEvent = { ...data, eventId: `evt-${Date.now()}`, currentRegistrations: 0, availableSpots: Number(data.maxParticipants || data.max_participants || 50), isActive: true };
+      saveToStore('tp_events', [...events, newEvent]);
+      return { data: { success: true, data: newEvent } };
+    }
+
     const eventData = {
 
       ...data,
@@ -167,6 +186,19 @@ export const eventApi = {
   // UPDATE EVENT
   // --------------------------------------------------
   update: async (id, data) => {
+
+    if (auth.isMock) {
+      const events = getFromStore('tp_events') || [];
+      const index = events.findIndex((item) => item.eventId === id);
+      if (index === -1) throw new Error('Event not found');
+      const event = { ...events[index], ...data };
+      const maxParticipants = Number(event.maxParticipants ?? event.max_participants ?? 50);
+      event.maxParticipants = maxParticipants;
+      event.availableSpots = Math.max(0, maxParticipants - Number(event.currentRegistrations || 0));
+      events[index] = event;
+      saveToStore('tp_events', events);
+      return { data: { success: true, data: event } };
+    }
 
     const eventRef = doc(
       db,
@@ -237,6 +269,11 @@ export const eventApi = {
   // DELETE EVENT
   // --------------------------------------------------
   delete: async (id) => {
+
+    if (auth.isMock) {
+      saveToStore('tp_events', (getFromStore('tp_events') || []).filter((event) => event.eventId !== id));
+      return { data: { success: true } };
+    }
 
     const eventRef = doc(
       db,

@@ -19,6 +19,13 @@ import { formatDate } from '../../utils/formatDate';
 
 import { useNotification } from '../../context/NotificationContext';
 
+const asDate = (value) => {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') return value.toDate();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 export default function EventDetailPage() {
 
   const { id } = useParams();
@@ -36,6 +43,7 @@ export default function EventDetailPage() {
 
   const [isRegistered, setIsRegistered] =
     useState(false);
+  const [registrationConfirmation, setRegistrationConfirmation] = useState(null);
 
 
   // --------------------------------------------------
@@ -157,7 +165,9 @@ export default function EventDetailPage() {
 
     try {
 
-      await registrationApi.register(id);
+      const response = await registrationApi.register(id);
+      setRegistrationConfirmation(response.data.data);
+      setIsRegistered(true);
 
       /*
        * We don't need to manually call getById()
@@ -210,6 +220,33 @@ export default function EventDetailPage() {
   if (!event) {
     return null;
   }
+
+  if (registrationConfirmation) {
+    return (
+      <section className="mx-auto max-w-2xl rounded-2xl p-8 text-center" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-md)' }}>
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-2xl" style={{ backgroundColor: '#dcfce7', color: '#166534' }}>✓</div>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Registration Successful</h1>
+        <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>Your place has been reserved for {event.title}.</p>
+        <div className="my-6 rounded-xl p-4 text-left" style={{ backgroundColor: 'var(--color-surface-secondary)' }}>
+          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Registration ID</p>
+          <p className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{registrationConfirmation.registrationId}</p>
+          <p className="mt-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>Event</p>
+          <p className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{event.title}</p>
+          <p className="mt-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(event.date)} · {event.time || 'Time to be announced'} · {event.venue || 'Venue to be announced'}</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3"><Button onClick={() => navigate('/my-registrations')}>My Registrations</Button><Button variant="secondary" onClick={() => setRegistrationConfirmation(null)}>Back to Event</Button></div>
+      </section>
+    );
+  }
+
+  const eventDate = asDate(event.date);
+  const deadline = asDate(event.registrationDeadline);
+  const currentRegistrations = Number(event.currentRegistrations || 0);
+  const maxParticipants = Number(event.maxParticipants ?? event.max_participants ?? 0);
+  const availableSpots = event.availableSpots ?? (maxParticipants ? Math.max(0, maxParticipants - currentRegistrations) : null);
+  const deadlinePassed = Boolean(deadline && deadline < new Date());
+  const registrationClosed = event.isActive === false || deadlinePassed;
+  const eventCompleted = Boolean(eventDate && eventDate < new Date());
 
 
   // --------------------------------------------------
@@ -326,11 +363,7 @@ export default function EventDetailPage() {
               Date & Time
             </p>
 
-            <p className="text-sm font-semibold">
-              {formatDate(event.date)}
-              {' · '}
-              {event.time}
-            </p>
+            <p className="text-sm font-semibold">{formatDate(event.date)} · {event.time || [event.startTime, event.endTime].filter(Boolean).join(' - ') || 'Time to be announced'}</p>
 
           </div>
 
@@ -367,8 +400,7 @@ export default function EventDetailPage() {
             </p>
 
             <p className="text-sm font-semibold">
-              {event.eventHeadName ||
-                'N/A'}
+              {event.organizer || event.eventHeadName || 'N/A'}
             </p>
 
           </div>
@@ -387,13 +419,21 @@ export default function EventDetailPage() {
             </p>
 
             <p className="text-sm font-semibold">
-              {event.eventHeadPhone ||
-                'N/A'}
+              {event.coordinator || event.eventHeadPhone || 'N/A'}
             </p>
 
           </div>
 
         </div>
+
+        <div className="mb-6 grid grid-cols-2 gap-4 rounded-lg p-4" style={{ backgroundColor: 'var(--color-surface-secondary)' }}>
+          <div><p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Registration deadline</p><p className="text-sm font-semibold">{formatDate(deadline)}</p></div>
+          <div><p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Participation</p><p className="text-sm font-semibold">{maxParticipants ? `${currentRegistrations} / ${maxParticipants} seats filled` : `${currentRegistrations} registered`}</p></div>
+          <div><p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Eligibility</p><p className="text-sm font-semibold">{event.eligibility || 'Open to eligible SIT students'}</p></div>
+          <div><p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Status</p><p className="text-sm font-semibold">{eventCompleted ? 'Completed' : (registrationClosed ? 'Registration closed' : 'Registration open')}</p></div>
+        </div>
+
+        {event.rules?.length > 0 && <section className="mb-6"><h2 className="mb-2 text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>Rules</h2><ul className="list-disc space-y-1 pl-5 text-sm" style={{ color: 'var(--color-text-secondary)' }}>{event.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul></section>}
 
 
         {/* REGISTRATION */}
@@ -418,9 +458,7 @@ export default function EventDetailPage() {
                   'var(--color-text-primary)',
               }}
             >
-              {event.availableSpots >= 0
-                ? event.availableSpots
-                : 'Unlimited'}
+                {availableSpots === null ? 'Not specified' : availableSpots}
             </strong>
 
           </span>
@@ -441,16 +479,19 @@ export default function EventDetailPage() {
               onClick={handleRegister}
               loading={registering}
               disabled={
-                !event.isActive ||
-                event.availableSpots === 0
+                registrationClosed ||
+                eventCompleted ||
+                availableSpots === 0
               }
             >
-              Register Now
+              {registrationClosed || eventCompleted ? 'Registration Closed' : (availableSpots === 0 ? 'Registration Full' : 'Register Now')}
             </Button>
 
           )}
 
         </div>
+
+        <Button variant="ghost" onClick={() => navigate('/events')} className="mt-4">Back to Events</Button>
 
       </div>
 

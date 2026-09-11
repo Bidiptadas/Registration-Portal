@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, useOutletContext } from 'react-router-d
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { signIn, signOut } from '../../firebase/authService';
+import { normalizeEmail } from '../../utils/authValidation';
 
 export default function StudentLoginPage() {
   const { isWireframe } = useOutletContext();
@@ -28,15 +29,17 @@ export default function StudentLoginPage() {
       setError('Please enter your email and password.');
       return;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email.trim())) {
+    let email;
+    try {
+      email = normalizeEmail(form.email);
+    } catch {
       setError('Please enter a valid email address.');
       return;
     }
     setLoading(true);
     try {
       const user = await signIn(
-        form.email.trim(),
+        email,
         form.password
       );
       if (!user.emailVerified) {

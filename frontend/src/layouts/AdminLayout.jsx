@@ -7,7 +7,7 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen relative overflow-x-hidden" style={{ backgroundColor: 'var(--color-background)' }}>
+    <div className={`flex min-h-screen relative overflow-x-hidden${sidebarOpen ? ' admin-layout--sidebar-open' : ''}`} style={{ backgroundColor: 'var(--color-background)' }}>
       {/* Mobile Sidebar Overlay Backdrop */}
       {sidebarOpen && (
         <div
@@ -16,7 +16,7 @@ export default function AdminLayout() {
         />
       )}
       <Sidebar variant="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="admin-layout__content flex flex-1 flex-col min-w-0">
         <Navbar isAdmin onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 p-4 md:p-6">
           <Outlet />

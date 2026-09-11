@@ -3,7 +3,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  addDoc,
   updateDoc,
   query,
   where,
@@ -16,6 +15,7 @@ import {
   auth,
   db,
 } from '../firebase/firebaseConfig';
+import { getFromStore, saveToStore } from './mockDb';
 
 const REGISTRATIONS_COLLECTION = 'registrations';
 
@@ -108,6 +108,14 @@ export const registrationApi = {
           throw new Error(
             'This event is no longer active.'
           );
+        }
+
+        const deadline = event.registrationDeadline?.toDate
+          ? event.registrationDeadline.toDate()
+          : (event.registrationDeadline ? new Date(event.registrationDeadline) : null);
+
+        if (deadline && deadline < new Date()) {
+          throw new Error('Registration deadline has passed.');
         }
 
 
@@ -270,6 +278,11 @@ export const registrationApi = {
   // --------------------------------------------------
   getMyRegistrations: async () => {
 
+    if (auth.isMock) {
+      const uid = auth.currentUser?.uid || 'mock-student-uid';
+      return { data: { success: true, data: (getFromStore('tp_registrations') || []).filter((registration) => registration.userId === uid) } };
+    }
+
     const user = auth.currentUser;
 
     if (!user) {
@@ -320,6 +333,10 @@ export const registrationApi = {
   // --------------------------------------------------
   getByEvent: async (eventId) => {
 
+    if (auth.isMock) {
+      return { data: { success: true, data: (getFromStore('tp_registrations') || []).filter((registration) => registration.eventId === eventId) } };
+    }
+
     const registrationsRef =
       collection(
         db,
@@ -360,6 +377,11 @@ export const registrationApi = {
   // GET ALL REGISTRATIONS
   // --------------------------------------------------
   getAll: async () => {
+
+    if (auth.isMock) {
+      const registrations = getFromStore('tp_registrations') || [];
+      return { data: { success: true, data: { registrations, total: registrations.length, page: 1, limit: 100 } } };
+    }
 
     const registrationsRef =
       collection(
@@ -403,6 +425,30 @@ export const registrationApi = {
     registrationId,
     status
   ) => {
+
+    if (auth.isMock) {
+      const registrations = getFromStore('tp_registrations') || [];
+      const index = registrations.findIndex((registration) => registration.registrationId === registrationId);
+      if (index === -1) throw new Error('Registration not found.');
+
+      const registration = registrations[index];
+      const oldStatus = registration.status;
+      registrations[index] = { ...registration, status };
+      saveToStore('tp_registrations', registrations);
+
+      if (status === 'cancelled' && oldStatus === 'registered') {
+        const events = getFromStore('tp_events') || [];
+        const eventIndex = events.findIndex((event) => event.eventId === registration.eventId);
+        if (eventIndex !== -1) {
+          const event = events[eventIndex];
+          const currentRegistrations = Math.max(0, Number(event.currentRegistrations || 0) - 1);
+          events[eventIndex] = { ...event, currentRegistrations, availableSpots: Math.max(0, Number(event.maxParticipants || 50) - currentRegistrations) };
+          saveToStore('tp_events', events);
+        }
+      }
+
+      return { data: { success: true, data: registrations[index] } };
+    }
 
     const registrationRef =
       doc(
@@ -535,11 +581,48 @@ export const registrationApi = {
   cancel: async (
     registrationId
   ) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error('You must be logged in to cancel a registration.');
 
-    return registrationApi.updateStatus(
-      registrationId,
-      'cancelled'
-    );
+    if (auth.isMock) {
+      const registrations = getFromStore('tp_registrations') || [];
+      const index = registrations.findIndex((registration) => registration.registrationId === registrationId);
+      if (index === -1) throw new Error('Registration not found.');
+      const registration = registrations[index];
+      if (registration.userId !== user.uid) throw new Error('You can only cancel your own registration.');
+      if (registration.status !== 'registered') throw new Error('This registration is no longer active.');
+      registrations[index] = { ...registration, status: 'cancelled' };
+      saveToStore('tp_registrations', registrations);
+      return { data: { success: true, data: registrations[index] } };
+    }
+
+    const registrationRef = doc(db, REGISTRATIONS_COLLECTION, registrationId);
+    let cancelledRegistration = null;
+
+    await runTransaction(db, async (transaction) => {
+      const registrationSnapshot = await transaction.get(registrationRef);
+      if (!registrationSnapshot.exists()) throw new Error('Registration not found.');
+
+      const registration = registrationSnapshot.data();
+      if (registration.userId !== user.uid) throw new Error('You can only cancel your own registration.');
+      if (registration.status !== 'registered') throw new Error('This registration is no longer active.');
+
+      const registrationEventRef = doc(db, EVENTS_COLLECTION, registration.eventId);
+      const eventSnapshot = await transaction.get(registrationEventRef);
+      if (eventSnapshot.exists()) {
+        const event = eventSnapshot.data();
+        const eventDate = event.date?.toDate ? event.date.toDate() : (event.date ? new Date(event.date) : null);
+        if (eventDate && eventDate < new Date()) throw new Error('Past event registrations cannot be cancelled.');
+        const current = Number(event.currentRegistrations || 0);
+        const max = Number(event.maxParticipants ?? event.max_participants ?? 50);
+        transaction.update(registrationEventRef, { currentRegistrations: Math.max(0, current - 1), availableSpots: Math.max(0, max - Math.max(0, current - 1)), updatedAt: serverTimestamp() });
+      }
+
+      cancelledRegistration = { ...registration, registrationId, status: 'cancelled' };
+      transaction.update(registrationRef, { status: 'cancelled', updatedAt: serverTimestamp() });
+    });
+
+    return { data: { success: true, data: cancelledRegistration } };
   },
 
 

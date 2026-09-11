@@ -17,7 +17,17 @@ import {
 import { auth } from './firebaseConfig';
 
 import { getFromStore } from '../services/mockDb';
+import { normalizeEmail, validatePassword } from '../utils/authValidation';
 
+const hashMockPassword = async (password) => {
+  if (!globalThis.crypto?.subtle) {
+    return password;
+  }
+
+  const encoded = new TextEncoder().encode(password);
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', encoded);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
 
 // --------------------------------------------------
 // SIGN UP
@@ -28,6 +38,8 @@ export const signUp = async (
   password,
   displayName
 ) => {
+  const normalizedEmail = normalizeEmail(email);
+  validatePassword(password);
 
   // ------------------------------------------------
   // MOCK AUTHENTICATION
@@ -37,9 +49,6 @@ export const signUp = async (
 
     const accounts =
       getFromStore('tp_auth_users') || [];
-
-    const normalizedEmail =
-      email.trim().toLowerCase();
 
     if (
       accounts.some(
@@ -69,7 +78,7 @@ export const signUp = async (
         {
           uid,
           email: normalizedEmail,
-          password,
+          passwordHash: await hashMockPassword(password),
           displayName,
         },
       ])
@@ -83,7 +92,7 @@ export const signUp = async (
 
       displayName,
 
-      emailVerified: true,
+      emailVerified: false,
 
       getIdToken: async () =>
         `mock-student-token:${normalizedEmail}`,
@@ -109,7 +118,7 @@ export const signUp = async (
   const userCredential =
     await createUserWithEmailAndPassword(
       auth,
-      email,
+      normalizedEmail,
       password
     );
 
@@ -119,6 +128,8 @@ export const signUp = async (
       displayName,
     }
   );
+
+  await sendEmailVerification(userCredential.user);
 
   return userCredential.user;
 };
@@ -179,7 +190,12 @@ export const signIn = async (
         throw error;
       }
 
-      if (account.password !== password) {
+      const passwordHash = await hashMockPassword(password);
+      const passwordMatches = account.passwordHash
+        ? account.passwordHash === passwordHash
+        : account.password === password;
+
+      if (!passwordMatches) {
 
         const error = new Error(
           'Incorrect password.'
@@ -221,7 +237,7 @@ export const signIn = async (
 
       displayName,
 
-      emailVerified: true,
+      emailVerified: Boolean(account?.emailVerified),
 
       getIdToken: async () =>
         role === 'admin'
