@@ -1,9 +1,7 @@
-/** Student profile service backed by Firestore with a local fallback for mock mode. */
-import { getFromStore, saveToStore } from './mockDb';
-import { auth } from '../firebase/firebaseConfig';
+/** Student profile service backed directly by Firestore. */
+import { auth, db } from '../firebase/firebaseConfig';
 import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase/firebaseConfig';
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 const getAuthenticatedUser = () => {
   if (!auth.currentUser) {
@@ -17,66 +15,55 @@ const getAuthenticatedUser = () => {
 
 export const studentApi = {
   getMyProfile: async () => {
-    if (!auth.isMock) {
-      const user = getAuthenticatedUser();
-      const snapshot = await getDoc(doc(db, 'users', user.uid));
-      return { data: { success: true, data: snapshot.exists() ? snapshot.data() : null } };
-    }
-
-    const students = getFromStore('tp_students') || [];
-    const uid = auth.currentUser?.uid || 'mock-student-uid';
-    const student = students.find((s) => s.uid === uid) || students[0];
-    return { data: { success: true, data: student } };
+    const user = getAuthenticatedUser();
+    const snapshot = await getDoc(doc(db, 'users', user.uid));
+    return { data: { success: true, data: snapshot.exists() ? snapshot.data() : null } };
   },
 
   updateMyProfile: async (data) => {
-    if (!auth.isMock) {
-      const user = getAuthenticatedUser();
-      const profileData = {
-        display_name: data.display_name.trim(),
-        phone: data.phone,
-        year: Number(data.year),
-        ...(data.profileImageUrl !== undefined ? { profileImageUrl: data.profileImageUrl } : {}),
-        updatedAt: serverTimestamp(),
-      };
+    const user = getAuthenticatedUser();
+    const profileData = {
+      display_name: (data.display_name || data.displayName || '').trim(),
+      phone: data.phone || '',
+      college: (data.college || data.collegeName || '').trim(),
+      ...(data.profileImageUrl !== undefined ? { profileImageUrl: data.profileImageUrl } : {}),
+      updatedAt: serverTimestamp(),
+    };
 
-      await updateDoc(doc(db, 'users', user.uid), profileData);
-      if (data.display_name.trim() !== user.displayName) {
-        await updateProfile(user, { displayName: data.display_name.trim() });
-      }
-
-      return { data: { success: true, data: { ...data, ...profileData, uid: user.uid } } };
+    await updateDoc(doc(db, 'users', user.uid), profileData);
+    const newName = (data.display_name || data.displayName || '').trim();
+    if (newName && newName !== user.displayName) {
+      await updateProfile(user, { displayName: newName });
     }
 
-    const students = getFromStore('tp_students') || [];
-    const uid = auth.currentUser?.uid || 'mock-student-uid';
-    const index = students.findIndex((s) => s.uid === uid);
-    if (index !== -1) {
-      students[index] = { ...students[index], ...data };
-      saveToStore('tp_students', students);
-    }
-    return { data: { success: true, data: students[index] } };
+    return { data: { success: true, data: { ...data, ...profileData, uid: user.uid } } };
   },
 
   getById: async (id) => {
-    const students = getFromStore('tp_students') || [];
-    const student = students.find((s) => s.uid === id);
-    return { data: { success: true, data: student } };
+    const snap = await getDoc(doc(db, 'users', id));
+    if (!snap.exists()) {
+      throw new Error('Student not found');
+    }
+    return { data: { success: true, data: { ...snap.data(), uid: snap.id } } };
   },
 
   getAll: async (params) => {
-    const students = getFromStore('tp_students') || [];
+    const snap = await getDocs(collection(db, 'users'));
+    let students = snap.docs.map((d) => ({ ...d.data(), uid: d.id }));
+
     if (params?.search) {
-      const filtered = students.filter((s) =>
-        s.displayName.toLowerCase().includes(params.search.toLowerCase())
+      const q = params.search.toLowerCase();
+      students = students.filter((s) =>
+        (s.displayName || s.display_name || s.name || '').toLowerCase().includes(q) ||
+        (s.email || '').toLowerCase().includes(q)
       );
-      return { data: { success: true, data: filtered } };
     }
+
     return {
       data: {
         success: true,
         data: {
-          students: students,
+          students,
           total: students.length,
           page: 1,
           limit: 100,
@@ -86,9 +73,7 @@ export const studentApi = {
   },
 
   delete: async (id) => {
-    const students = getFromStore('tp_students') || [];
-    const updated = students.filter((s) => s.uid !== id);
-    saveToStore('tp_students', updated);
+    await deleteDoc(doc(db, 'users', id));
     return { data: { success: true } };
   },
 };

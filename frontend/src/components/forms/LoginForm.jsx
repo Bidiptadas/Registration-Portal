@@ -29,7 +29,6 @@ export default function LoginForm({ onSubmit, loading = false, error = '' }) {
         onChange={(e) => setEmail(e.target.value)}
         placeholder="e.g. johndoe@sju.edu.in"
         required
-        icon="📧"
       />
       <Input
         label="Password"
@@ -39,7 +38,6 @@ export default function LoginForm({ onSubmit, loading = false, error = '' }) {
         onChange={(e) => setPassword(e.target.value)}
         placeholder="••••••••"
         required
-        icon="🔒"
       />
       <Button type="submit" size="lg" loading={loading} fullWidth className="mt-2">
         Log In

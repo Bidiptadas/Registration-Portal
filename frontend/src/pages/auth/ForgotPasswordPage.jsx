@@ -23,7 +23,11 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <div className="text-center py-4">
-        <span className="text-6xl block mb-6">✉️</span>
+        <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--color-primary)' }}>
+          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
         <h2 className="text-2xl font-extrabold mb-3" style={{ color: 'var(--color-text-primary)' }}>
           Check your email
         </h2>
@@ -54,7 +58,6 @@ export default function ForgotPasswordPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          icon="📧"
           placeholder="e.g. johndoe@sju.edu.in"
         />
         <Button type="submit" size="lg" loading={loading} fullWidth>

@@ -8,9 +8,19 @@
  * @param {object} options - Intl.DateTimeFormat options
  * @returns {string}
  */
+const parseDate = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value.toDate === 'function') return value.toDate();
+  if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
+  if (typeof value._seconds === 'number') return new Date(value._seconds * 1000);
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export const formatDate = (date, options = {}) => {
-  if (!date) return 'N/A';
-  const d = new Date(date);
+  const d = parseDate(date);
+  if (!d) return 'Date TBA';
   return d.toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
@@ -23,8 +33,8 @@ export const formatDate = (date, options = {}) => {
  * Format a date to include time.
  */
 export const formatDateTime = (date) => {
-  if (!date) return 'N/A';
-  const d = new Date(date);
+  const d = parseDate(date);
+  if (!d) return 'Time TBA';
   return d.toLocaleString('en-IN', {
     day: 'numeric',
     month: 'short',

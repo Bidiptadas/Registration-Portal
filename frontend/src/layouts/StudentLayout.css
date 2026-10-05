@@ -4,6 +4,15 @@
   overflow-x: hidden;
   isolation: isolate;
   background: #173b4d;
+
+  /* Override text color tokens for the dark background */
+  --color-text-primary: #f0f9ff;
+  --color-text-secondary: #bae6fd;
+  --color-text-muted: #7dd3fc;
+  --color-surface: rgba(15, 23, 42, 0.72);
+  --color-surface-secondary: rgba(11, 15, 25, 0.62);
+  --color-border: rgba(186, 230, 253, 0.18);
+  --color-background: transparent;
 }
 
 .student-layout__background {

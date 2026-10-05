@@ -15,304 +15,55 @@ import {
 } from 'firebase/auth';
 
 import { auth } from './firebaseConfig';
-
-import { getFromStore } from '../services/mockDb';
 import { normalizeEmail, validatePassword } from '../utils/authValidation';
-
-const hashMockPassword = async (password) => {
-  if (!globalThis.crypto?.subtle) {
-    return password;
-  }
-
-  const encoded = new TextEncoder().encode(password);
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', encoded);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-};
 
 // --------------------------------------------------
 // SIGN UP
 // --------------------------------------------------
-
-export const signUp = async (
-  email,
-  password,
-  displayName
-) => {
+export const signUp = async (email, password, displayName) => {
   const normalizedEmail = normalizeEmail(email);
   validatePassword(password);
 
-  // ------------------------------------------------
-  // MOCK AUTHENTICATION
-  // ------------------------------------------------
-
-  if (auth.isMock) {
-
-    const accounts =
-      getFromStore('tp_auth_users') || [];
-
-    if (
-      accounts.some(
-        (account) =>
-          account.email === normalizedEmail
-      )
-    ) {
-
-      const error = new Error(
-        'An account with this email address already exists.'
-      );
-
-      error.code =
-        'auth/email-already-in-use';
-
-      throw error;
-    }
-
-    const uid =
-      `mock-student-uid-${Date.now()}`;
-
-    localStorage.setItem(
-      'tp_auth_users',
-      JSON.stringify([
-        ...accounts,
-
-        {
-          uid,
-          email: normalizedEmail,
-          passwordHash: await hashMockPassword(password),
-          displayName,
-        },
-      ])
-    );
-
-    const fakeUser = {
-
-      uid,
-
-      email: normalizedEmail,
-
-      displayName,
-
-      emailVerified: false,
-
-      getIdToken: async () =>
-        `mock-student-token:${normalizedEmail}`,
-    };
-
-    auth.currentUser = fakeUser;
-
-    if (auth._onAuthChangeCallback) {
-
-      auth._onAuthChangeCallback(
-        fakeUser
-      );
-    }
-
-    return fakeUser;
-  }
-
-
-  // ------------------------------------------------
-  // REAL FIREBASE AUTHENTICATION
-  // ------------------------------------------------
-
-  const userCredential =
-    await createUserWithEmailAndPassword(
-      auth,
-      normalizedEmail,
-      password
-    );
-
-  await updateProfile(
-    userCredential.user,
-    {
-      displayName,
-    }
+  const userCredential = await createUserWithEmailAndPassword(
+    auth,
+    normalizedEmail,
+    password
   );
+
+  await updateProfile(userCredential.user, {
+    displayName,
+  });
 
   await sendEmailVerification(userCredential.user);
 
   return userCredential.user;
 };
 
-
 // --------------------------------------------------
 // SIGN IN
 // --------------------------------------------------
-
-export const signIn = async (
-  email,
-  password
-) => {
-
-  // ------------------------------------------------
-  // MOCK AUTHENTICATION
-  // ------------------------------------------------
-
-  if (auth.isMock) {
-
-    const normalizedEmail =
-      email.trim().toLowerCase();
-
-    const role =
-      normalizedEmail.includes('admin')
-        ? 'admin'
-        : 'student';
-
-    let displayName = 'Mock Student';
-
-    let uid = 'mock-student-uid';
-
-
-    // ----------------------------------------------
-    // MOCK STUDENT
-    // ----------------------------------------------
-
-    if (role === 'student') {
-
-      const accounts =
-        getFromStore('tp_auth_users') || [];
-
-      const account =
-        accounts.find(
-          (item) =>
-            item.email === normalizedEmail
-        );
-
-      if (!account) {
-
-        const error = new Error(
-          'No account exists with this email.'
-        );
-
-        error.code =
-          'auth/user-not-found';
-
-        throw error;
-      }
-
-      const passwordHash = await hashMockPassword(password);
-      const passwordMatches = account.passwordHash
-        ? account.passwordHash === passwordHash
-        : account.password === password;
-
-      if (!passwordMatches) {
-
-        const error = new Error(
-          'Incorrect password.'
-        );
-
-        error.code =
-          'auth/wrong-password';
-
-        throw error;
-      }
-
-      displayName =
-        account.displayName;
-
-      uid =
-        account.uid;
-    }
-
-
-    // ----------------------------------------------
-    // MOCK ADMIN
-    // ----------------------------------------------
-
-    else {
-
-      displayName =
-        'Mock Admin';
-
-      uid =
-        'mock-admin-uid';
-    }
-
-
-    const fakeUser = {
-
-      uid,
-
-      email: normalizedEmail,
-
-      displayName,
-
-      emailVerified: Boolean(account?.emailVerified),
-
-      getIdToken: async () =>
-        role === 'admin'
-          ? 'mock-admin-token'
-          : `mock-student-token:${normalizedEmail}`,
-    };
-
-
-    auth.currentUser =
-      fakeUser;
-
-    if (auth._onAuthChangeCallback) {
-
-      auth._onAuthChangeCallback(
-        fakeUser
-      );
-    }
-
-    return fakeUser;
-  }
-
-
-  // ------------------------------------------------
-  // REAL FIREBASE SIGN IN
-  // ------------------------------------------------
-
-  const userCredential =
-    await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+export const signIn = async (email, password) => {
+  const userCredential = await signInWithEmailAndPassword(
+    auth,
+    email,
+    password
+  );
 
   return userCredential.user;
 };
 
-
 // --------------------------------------------------
 // SIGN OUT
 // --------------------------------------------------
-
 export const signOut = async () => {
-
-  if (auth.isMock) {
-
-    auth.currentUser = null;
-
-    if (auth._onAuthChangeCallback) {
-
-      auth._onAuthChangeCallback(null);
-    }
-
-    return;
-  }
-
   await firebaseSignOut(auth);
 };
-
 
 // --------------------------------------------------
 // GET ID TOKEN
 // --------------------------------------------------
-
 export const getIdToken = async () => {
-
-  if (auth.isMock) {
-
-    return auth.currentUser
-      ? 'mock-id-token-xyz'
-      : null;
-  }
-
-  const user =
-    auth.currentUser;
-
+  const user = auth.currentUser;
   if (!user) {
     return null;
   }
@@ -320,74 +71,26 @@ export const getIdToken = async () => {
   return user.getIdToken();
 };
 
-
 // --------------------------------------------------
 // AUTH STATE LISTENER
 // --------------------------------------------------
-
-export const onAuthChange = (
-  callback
-) => {
-
-  if (auth.isMock) {
-
-    auth._onAuthChangeCallback =
-      callback;
-
-    setTimeout(
-      () =>
-        callback(
-          auth.currentUser
-        ),
-      0
-    );
-
-    return () => {};
-  }
-
-  return onAuthStateChanged(
-    auth,
-    callback
-  );
+export const onAuthChange = (callback) => {
+  return onAuthStateChanged(auth, callback);
 };
-
 
 // --------------------------------------------------
 // RESET PASSWORD
 // --------------------------------------------------
-
-export const resetPassword = async (
-  email
-) => {
-
-  if (auth.isMock) {
-    return;
-  }
-
-  await sendPasswordResetEmail(
-    auth,
-    email
-  );
+export const resetPassword = async (email) => {
+  await sendPasswordResetEmail(auth, email);
 };
-
 
 // --------------------------------------------------
 // SEND EMAIL VERIFICATION
 // --------------------------------------------------
-
 export const verifyEmail = async () => {
-
-  if (auth.isMock) {
-    return;
-  }
-
-  const user =
-    auth.currentUser;
-
+  const user = auth.currentUser;
   if (user) {
-
-    await sendEmailVerification(
-      user
-    );
+    await sendEmailVerification(user);
   }
 };

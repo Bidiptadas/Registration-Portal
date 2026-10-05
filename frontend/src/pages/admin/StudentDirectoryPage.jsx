@@ -73,7 +73,7 @@ export default function StudentDirectoryPage() {
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <SearchBar onSearch={handleSearch} placeholder="Search students..." className="w-full sm:w-64" />
-          <Button onClick={handleExport} variant="secondary">📥 Export</Button>
+          <Button onClick={handleExport} variant="secondary">Export</Button>
         </div>
       </div>
 

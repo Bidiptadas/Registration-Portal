@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
             console.log('Admin document ID:', adminDoc.id);
             console.log('Admin data:', adminData);
 
-            if (adminData.role === 'admin') {
+            if (adminData.role === 'admin' || !adminData.role) {
               const adminProfile = {
                 ...adminData,
 
@@ -171,6 +171,7 @@ export function AuthProvider({ children }) {
 
               const role =
                 studentData.role || 'student';
+              const isUserAdmin = role === 'admin';
 
               const studentProfile = {
                 ...studentData,
@@ -197,16 +198,16 @@ export function AuthProvider({ children }) {
               };
 
               setUserProfile(studentProfile);
-              setIsAdmin(false);
+              setIsAdmin(isUserAdmin);
               setLoading(false);
 
               console.log('=================================');
-              console.log('STUDENT PROFILE FOUND');
+              console.log('USER PROFILE FOUND');
               console.log('=================================');
-              console.log('Student document ID:', studentDoc.id);
-              console.log('Student data:', studentData);
+              console.log('Document ID:', studentSnapshot.id);
+              console.log('Data:', studentData);
               console.log('Role:', role);
-              console.log('Is admin:', false);
+              console.log('Is admin:', isUserAdmin);
             },
 
             (error) => {

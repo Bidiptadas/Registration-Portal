@@ -51,14 +51,21 @@ export default function EventFormPage() {
   if (loading && id) return <Loader />;
 
   return (
-    <div className="max-w-xl mx-auto rounded-xl p-6 shadow-sm" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-      <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
-        {id ? 'Edit Event' : 'Create Event'}
-      </h1>
-      <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-        Provide event parameters for student registration
-      </p>
-      <EventForm initialData={event || {}} onSubmit={handleSubmit} loading={loading} />
+    <div className="max-w-3xl mx-auto rounded-xl p-6 shadow-sm" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+          {id ? 'Edit Event' : 'Create Event'}
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Provide event parameters for student registration
+        </p>
+      </div>
+      <EventForm
+        initialData={event || {}}
+        onSubmit={handleSubmit}
+        onCancel={() => navigate(-1)}
+        loading={loading}
+      />
     </div>
   );
 }

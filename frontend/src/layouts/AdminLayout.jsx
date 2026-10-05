@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/navigation/Navbar';
 import Sidebar from '../components/navigation/Sidebar';
+import Footer from '../components/navigation/Footer';
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -21,6 +22,7 @@ export default function AdminLayout() {
         <main className="flex-1 p-4 md:p-6">
           <Outlet />
         </main>
+        <Footer />
       </div>
     </div>
   );

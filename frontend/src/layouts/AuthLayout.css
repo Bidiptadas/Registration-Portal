@@ -42,6 +42,10 @@
   backdrop-filter: blur(16px);
 }
 
+.auth-layout__card label {
+  color: #ffffff !important;
+}
+
 .auth-layout__footer {
   position: relative;
   display: grid;

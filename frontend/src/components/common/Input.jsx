@@ -14,6 +14,8 @@ export default function Input({
   disabled = false,
   icon,
   className = '',
+  labelClassName = '',
+  labelStyle = {},
   inputClassName = '',
   inputStyle = {},
   ...props
@@ -23,7 +25,8 @@ export default function Input({
       {label && (
         <label
           htmlFor={name}
-          className="block mb-2 text-lg sm:text-xl font-extrabold text-slate-800"
+          className={`block mb-2 text-lg sm:text-xl font-extrabold ${labelClassName || 'text-slate-800'}`}
+          style={labelStyle}
         >
           {label}
           {required && <span className="text-red-500"> *</span>}

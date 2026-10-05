@@ -31,7 +31,7 @@ export default function AssociationMembersPage() {
       <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>Meet the members organizing the Tecnophite fest</p>
 
       {members.length === 0 ? (
-        <EmptyState title="No members listed" description="Check back soon for the core committee list." icon="👥" />
+        <EmptyState title="No members listed" description="Check back soon for the core committee list." />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {members.map(member => (

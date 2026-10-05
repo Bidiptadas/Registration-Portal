@@ -24,6 +24,12 @@ app.add_middleware(
 )
 
 
+from backend.app.api.routes.payment import router as payment_router
+
+# Include routers
+app.include_router(payment_router)
+
+
 @app.get("/api/v1/health")
 async def health_check():
     """Health check endpoint."""

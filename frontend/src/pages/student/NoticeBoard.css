@@ -1,0 +1,336 @@
+/* NoticeBoard.css — Bulletin / Physical Notice Board Styling */
+
+.notice-board-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* Bulletin Frame */
+.notice-board-frame {
+  position: relative;
+  border-radius: 1.75rem;
+  border: 4px solid rgba(180, 83, 9, 0.45);
+  background: radial-gradient(circle at 50% 0%, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
+  box-shadow: 
+    0 0 0 1px rgba(251, 191, 36, 0.2),
+    0 20px 50px -10px rgba(0, 0, 0, 0.7),
+    inset 0 2px 10px rgba(0, 0, 0, 0.8),
+    inset 0 0 40px rgba(180, 83, 9, 0.08);
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  backdrop-filter: blur(12px);
+}
+
+/* Frame Corner Pins - Removed for clean, professional look */
+.notice-board-frame::before,
+.notice-board-frame::after {
+  display: none;
+}
+
+/* Bulletin Header Banner */
+.notice-board-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px dashed rgba(255, 255, 255, 0.15);
+}
+
+@media (min-width: 768px) {
+  .notice-board-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.notice-board-title-plate {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.notice-board-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Filter Bar */
+.notice-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.75rem;
+}
+
+.notice-pill {
+  padding: 0.45rem 0.95rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 180ms ease;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+}
+
+.notice-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.notice-pill.is-active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+
+/* Notice Grid */
+.notice-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .notice-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .notice-cards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Physical Notice Card */
+.notice-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 1.25rem;
+  padding: 1.5rem 1.35rem 1.25rem;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.5),
+    0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease, border-color 220ms ease;
+  overflow: hidden;
+}
+
+/* Professional Card Hover */
+.notice-card:hover {
+  transform: translateY(-4px) scale(1.005);
+  box-shadow: 
+    0 20px 35px -8px rgba(0, 0, 0, 0.65),
+    0 0 20px rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  z-index: 10;
+}
+
+/* Pinned Card Accent */
+.notice-card.is-pinned {
+  border-top: 3px solid #f59e0b;
+}
+
+.notice-card.is-urgent {
+  border-top: 3px solid #ef4444;
+}
+
+/* Pushpin sticker removed */
+.notice-card__pin {
+  display: none;
+}
+
+.notice-card__pin::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.pin-gold {
+  background: radial-gradient(circle at 35% 35%, #fbbf24, #d97706, #78350f);
+}
+
+.pin-red {
+  background: radial-gradient(circle at 35% 35%, #f87171, #dc2626, #7f1d1d);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.pin-cyan {
+  background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7, #075985);
+}
+
+.pin-emerald {
+  background: radial-gradient(circle at 35% 35%, #34d399, #059669, #064e3b);
+}
+
+.pin-purple {
+  background: radial-gradient(circle at 35% 35%, #c084fc, #9333ea, #581c87);
+}
+
+/* Card Header Meta */
+.notice-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Card Category Badge */
+.notice-category-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tag-urgent {
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.tag-event {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.tag-workshop {
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+}
+
+.tag-guidelines {
+  background: rgba(52, 211, 153, 0.16);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #34d399;
+}
+
+.tag-prizes {
+  background: rgba(192, 132, 252, 0.16);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: #c084fc;
+}
+
+/* Notice Card Content */
+.notice-card__title {
+  color: #fff;
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 0.65rem;
+}
+
+.notice-card__body {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-line;
+  margin-bottom: 1.25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notice-card.is-expanded .notice-card__body {
+  -webkit-line-clamp: unset;
+}
+
+/* Card Footer */
+.notice-card__footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.notice-card__author {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Admin Action Bar on Card */
+.notice-card__admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 160ms ease;
+  cursor: pointer;
+  border: none;
+}
+
+.admin-btn--edit {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.admin-btn--edit:hover {
+  background: rgba(56, 189, 248, 0.28);
+}
+
+.admin-btn--delete {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.admin-btn--delete:hover {
+  background: rgba(239, 68, 68, 0.28);
+}

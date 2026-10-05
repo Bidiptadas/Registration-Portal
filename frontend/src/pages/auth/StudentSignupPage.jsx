@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
@@ -14,7 +14,6 @@ import {
   signUp,
   signOut,
 } from '../../firebase/authService';
-import authApi from '../../services/authApi';
 import { normalizeEmail, validatePassword } from '../../utils/authValidation';
 
 import {
@@ -23,24 +22,18 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
-import { auth, db } from '../../firebase/firebaseConfig';
+import { db } from '../../firebase/firebaseConfig';
 
 export default function StudentSignupPage() {
-  const { isWireframe } = useOutletContext();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
     display_name: '',
     email: '',
+    phone: '',
+    college: '',
     password: '',
     confirmPassword: '',
-    phone: '',
-
-    // Registration defaults
-    college: "St. Joseph's University",
-    department: 'Computer Applications',
-    year: 1,
-    roll_number: 'PENDING_VERIFICATION',
   });
 
   const [loading, setLoading] = useState(false);
@@ -93,7 +86,16 @@ export default function StudentSignupPage() {
     }
 
     // --------------------------------------------------
-    // 4. PASSWORD VALIDATION
+    // 4. COLLEGE NAME VALIDATION
+    // --------------------------------------------------
+    const college = form.college.trim();
+    if (college.length < 2) {
+      setError('Please enter your college name.');
+      return;
+    }
+
+    // --------------------------------------------------
+    // 5. PASSWORD VALIDATION
     // --------------------------------------------------
     try {
       validatePassword(form.password);
@@ -103,7 +105,7 @@ export default function StudentSignupPage() {
     }
 
     // --------------------------------------------------
-    // 5. CONFIRM PASSWORD
+    // 6. CONFIRM PASSWORD
     // --------------------------------------------------
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match.');
@@ -114,7 +116,7 @@ export default function StudentSignupPage() {
 
     try {
       // ------------------------------------------------
-      // 6. CREATE FIREBASE AUTHENTICATION ACCOUNT
+      // 7. CREATE FIREBASE AUTHENTICATION ACCOUNT
       // ------------------------------------------------
       createdUser = await signUp(
         email,
@@ -125,31 +127,24 @@ export default function StudentSignupPage() {
       console.log('Firebase Auth user created:', createdUser.uid);
 
       // ------------------------------------------------
-      // 7. SAVE STUDENT DATA
+      // 8. SAVE STUDENT DATA
       // ------------------------------------------------
       const studentData = {
         uid: createdUser.uid,
         display_name: fullName,
         email,
         phone,
-        college: form.college,
-        department: form.department,
-        year: Number(form.year),
-        roll_number: form.roll_number,
+        college,
         role: 'student',
         profileImageUrl: '',
         emailVerified: false,
       };
 
-      if (auth.isMock) {
-        await authApi.register(studentData);
-      } else {
-        await setDoc(doc(db, 'users', createdUser.uid), {
-          ...studentData,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
+      await setDoc(doc(db, 'users', createdUser.uid), {
+        ...studentData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
       console.log(
         'Student successfully saved to Firestore:',
@@ -219,10 +214,10 @@ export default function StudentSignupPage() {
   };
 
   const headerClass =
-    'text-4xl sm:text-5xl md:text-6xl font-black mb-3 text-slate-900 tracking-tight';
+    'text-4xl sm:text-5xl md:text-6xl font-black mb-3 text-white tracking-tight';
 
   const subTextClass =
-    'text-xl sm:text-2xl font-semibold mb-8 text-slate-600';
+    'text-xl sm:text-2xl font-semibold mb-8 text-slate-300';
 
   return (
     <div>
@@ -247,8 +242,10 @@ export default function StudentSignupPage() {
       <div className="mb-10 p-6 rounded-2xl bg-indigo-50 border-2 border-indigo-200 text-indigo-900 shadow-sm">
         <div className="flex gap-4 items-start">
 
-          <span className="text-3xl">
-            📧
+          <span className="mt-1 text-indigo-700">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
           </span>
 
           <div>
@@ -317,6 +314,16 @@ export default function StudentSignupPage() {
           {/* RIGHT COLUMN */}
           <div className="space-y-6">
 
+            {/* COLLEGE NAME */}
+            <Input
+              label="College Name"
+              name="college"
+              placeholder="e.g. St. Joseph's University"
+              value={form.college}
+              onChange={handleChange}
+              required
+            />
+
             {/* PASSWORD */}
             <Input
               label="Password"
@@ -344,7 +351,7 @@ export default function StudentSignupPage() {
         </div>
 
         {/* PASSWORD REQUIREMENTS */}
-        <div className="text-sm text-slate-500">
+        <div className="text-sm text-slate-300">
 
           Password must contain at least:
 
@@ -375,13 +382,13 @@ export default function StudentSignupPage() {
       </form>
 
       {/* LOGIN LINK */}
-      <div className="mt-10 text-center text-xl font-bold text-slate-600">
+      <div className="mt-10 text-center text-xl font-bold text-slate-300">
 
         Already have an account?{' '}
 
         <Link
           to="/login"
-          className="text-sky-600 hover:text-sky-500 underline font-black"
+          className="text-sky-400 hover:text-sky-300 underline font-black"
         >
           Log in
         </Link>

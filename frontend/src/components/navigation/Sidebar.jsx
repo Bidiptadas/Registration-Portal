@@ -1,31 +1,43 @@
-/** Sidebar — collapsible side navigation for student and admin views. */
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import './Sidebar.css';
 
 const studentLinks = [
   { path: '/dashboard', label: 'Home' },
-  { path: '/announcements', label: 'Announcements' },
+  { path: '/events', label: 'Events' },
   { path: '/my-registrations', label: 'My Registrations' },
+  { path: '/certificates', label: 'Certificates' },
+  { path: '/announcements', label: 'Notice Board' },
   { path: '/profile', label: 'Profile' },
-  { path: '/help-desk', label: 'Help Desk' },
   { path: '/receipts-payments', label: 'Receipts / Payments' },
 ];
 
 const adminLinks = [
-  { path: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
-  { path: '/admin/events', label: 'Manage Events', icon: '🎉' },
-  { path: '/admin/event-heads', label: 'Event Heads', icon: '👔' },
-  { path: '/admin/members', label: 'Members', icon: '👥' },
-  { path: '/admin/registrations', label: 'Registrations', icon: '📋' },
-  { path: '/admin/students', label: 'Students', icon: '🎓' },
-  { path: '/admin/settings', label: 'Settings', icon: '⚙️' },
+  { path: '/admin/dashboard', label: 'Dashboard' },
+  { path: '/admin/announcements', label: 'Notice Board' },
+  { path: '/admin/events', label: 'Manage Events' },
+  { path: '/admin/certificates', label: 'Manage Certificates' },
+  { path: '/admin/members', label: 'Members' },
+  { path: '/admin/registrations', label: 'Registrations' },
+  { path: '/admin/students', label: 'Students' },
+  { path: '/admin/settings', label: 'Settings' },
 ];
 
 export default function Sidebar({ variant = 'student', isOpen, onClose }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout } = useAuth();
   const links = variant === 'admin' ? adminLinks : studentLinks;
+
+  const handleLogout = async () => {
+    try {
+      if (onClose) onClose();
+      await logout();
+      navigate(variant === 'admin' ? '/admin/login' : '/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
 
   return (
     <aside className={`app-sidebar${isOpen ? ' is-open' : ''}`}>
@@ -60,7 +72,7 @@ export default function Sidebar({ variant = 'student', isOpen, onClose }) {
           );
         })}
       </nav>
-      <button type="button" className="app-sidebar__logout" onClick={logout}>
+      <button type="button" className="app-sidebar__logout" onClick={handleLogout}>
         Logout
       </button>
     </aside>

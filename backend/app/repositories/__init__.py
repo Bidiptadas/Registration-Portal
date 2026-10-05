@@ -1,1 +1,0 @@
-# Tecnophite Registration Portal - Repositories

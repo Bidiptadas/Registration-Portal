@@ -7,18 +7,26 @@ const toDate = (value) => {
 
 const getEventDate = (event) => toDate(event.date || event.startDate);
 
-const isUpcoming = (event) => {
+const isPast = (event) => {
   const date = getEventDate(event);
-  return Boolean(date && date >= new Date() && event.isActive !== false);
+  return Boolean(date && date < new Date());
 };
 
-export const buildDashboardStats = (events, registrations) => {
-  const registeredEventIds = new Set(registrations.filter((item) => item.status === 'registered').map((item) => item.eventId));
-  const registeredEvents = events.filter((event) => registeredEventIds.has(event.eventId));
+const isUpcoming = (event) => {
+  return event.isActive !== false && !isPast(event);
+};
+
+export const buildDashboardStats = (events = [], registrations = []) => {
+  const registeredEventIds = new Set(
+    (registrations || [])
+      .filter((item) => item.status === 'registered')
+      .map((item) => item.eventId)
+  );
+  const registeredEvents = (events || []).filter((event) => registeredEventIds.has(event.eventId));
   return {
     registered: registeredEvents.length,
     upcoming: registeredEvents.filter(isUpcoming).length,
-    completed: registeredEvents.filter((event) => !isUpcoming(event)).length,
-    available: events.filter((event) => isUpcoming(event) && !registeredEventIds.has(event.eventId)).length,
+    completed: registeredEvents.filter(isPast).length,
+    available: (events || []).filter((event) => isUpcoming(event) && !registeredEventIds.has(event.eventId)).length,
   };
 };

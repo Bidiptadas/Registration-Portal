@@ -1,6 +1,7 @@
 /** AuthLayout - shared shell for login and registration pages. */
 import { Outlet } from 'react-router-dom';
 import { useState } from 'react';
+import Footer from '../components/navigation/Footer';
 import './AuthLayout.css';
 
 const UNIVERSITY_IMAGE_URL = 'https://www.sju.edu.in/assets/img/about/St-Josephs-University-bengaluru.webp';
@@ -41,17 +42,7 @@ export default function AuthLayout() {
           <Outlet context={{ isWireframe }} />
         </div>
       </main>
-      <footer className="auth-layout__footer">
-        <section>
-          <h2>University Address</h2>
-          <p>St Joseph University<br />36 Lalbagh Road<br />Bengaluru, Karnataka - 560027</p>
-        </section>
-        <section className="auth-layout__social">
-          <h2>Contact Details</h2>
-          <a href="https://instagram.com/sju_technophite" target="_blank" rel="noreferrer">Instagram</a>
-          <a href="https://linkedin.com/company/sju-technophite" target="_blank" rel="noreferrer">LinkedIn</a>
-        </section>
-      </footer>
+      <Footer />
     </div>
   );
 }

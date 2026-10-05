@@ -1,5 +1,6 @@
 /** ManageEventHeadsPage — Manage Event Heads assignees. */
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import associationApi from '../../services/associationApi';
 import DataTable from '../../components/common/DataTable';
 import Button from '../../components/common/Button';
@@ -17,6 +18,7 @@ export default function ManageEventHeadsPage() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', department: '' });
   const [editId, setEditId] = useState(null);
   const toast = useNotification();
+  const navigate = useNavigate();
 
   async function loadHeads() {
     try {
@@ -93,10 +95,20 @@ export default function ManageEventHeadsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Event Heads</h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Manage coordinators who lead each event</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex items-center gap-1"
+          >
+            <span>←</span> Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Event Heads</h1>
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Manage coordinators who lead each event</p>
+          </div>
         </div>
         <Button onClick={() => { setIsOpen(true); setEditId(null); setForm({ name: '', email: '', phone: '', department: '' }); }}>+ Add Coordinator</Button>
       </div>

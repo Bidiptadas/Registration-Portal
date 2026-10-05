@@ -1,9 +1,10 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
 import LoginForm from '../../components/forms/LoginForm';
+import { useAuth } from '../../hooks/useAuth';
 
 import {
   signIn,
@@ -30,6 +31,14 @@ export default function AdminLoginPage() {
 
   const navigate =
     useNavigate();
+
+  const { user: authUser, isAdmin, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && authUser && authUser.emailVerified && isAdmin) {
+      navigate('/admin/dashboard', { replace: true });
+    }
+  }, [authUser, isAdmin, authLoading, navigate]);
 
 
   // ------------------------------------------------
@@ -307,7 +316,8 @@ export default function AdminLoginPage() {
         // ============================================
 
         navigate(
-          '/admin/dashboard'
+          '/admin/dashboard',
+          { replace: true }
         );
 
       }

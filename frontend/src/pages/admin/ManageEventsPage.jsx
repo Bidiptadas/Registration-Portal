@@ -9,6 +9,8 @@ import { formatDate } from '../../utils/formatDate';
 import { useNotification } from '../../context/NotificationContext';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 
+import Badge from '../../components/common/Badge';
+
 export default function ManageEventsPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,29 +18,38 @@ export default function ManageEventsPage() {
   const navigate = useNavigate();
   const toast = useNotification();
 
-  async function loadEvents() {
-    try {
-      const res = await eventApi.getAll({ active_only: false });
-      setEvents(res.data.data.events || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    loadEvents();
+    setLoading(true);
+
+    const unsubscribe = eventApi.subscribeToEvents(
+      (updatedEvents) => {
+        setEvents(updatedEvents);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Real-time events error:', error);
+        toast.error('Failed to load events from Firestore');
+        setLoading(false);
+      },
+      { active_only: false }
+    );
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
+
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
       await eventApi.delete(deleteId);
       toast.success('Event deleted successfully.');
-      loadEvents();
+      setDeleteId(null);
     } catch (err) {
-      toast.error('Failed to delete event');
+      toast.error('Failed to delete event: ' + (err.message || 'Unknown error'));
     }
   };
 
@@ -47,6 +58,15 @@ export default function ManageEventsPage() {
     { key: 'category', label: 'Category' },
     { key: 'date', label: 'Date', render: (row) => formatDate(row.date) },
     { key: 'venue', label: 'Venue' },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => (
+        <Badge variant={row.isActive ? 'active' : 'closed'}>
+          {row.status ? row.status.toUpperCase() : (row.isActive ? 'OPEN' : 'CLOSED')}
+        </Badge>
+      ),
+    },
     { key: 'currentRegistrations', label: 'Registered' },
     {
       key: 'actions',
@@ -64,12 +84,24 @@ export default function ManageEventsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Manage Events</h1>
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Add, edit, or delete event listings</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex items-center gap-1"
+          >
+            <span>←</span> Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Manage Events</h1>
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Add, edit, or delete event listings</p>
+          </div>
         </div>
-        <Button onClick={() => navigate('/admin/events/new')}>+ Add Event</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => navigate('/admin/events/new')}>+ Add Event</Button>
+        </div>
       </div>
 
       <DataTable columns={columns} data={events} />

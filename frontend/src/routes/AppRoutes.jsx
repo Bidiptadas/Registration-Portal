@@ -27,13 +27,14 @@ const EventDetailPage = lazy(() => import('../pages/student/EventDetailPage'));
 const MyRegistrationsPage = lazy(() => import('../pages/student/MyRegistrationsPage'));
 const StudentProfilePage = lazy(() => import('../pages/student/StudentProfilePage'));
 const AnnouncementsPage = lazy(() => import('../pages/student/AnnouncementsPage'));
-const HelpDeskPage = lazy(() => import('../pages/student/HelpDeskPage'));
 const ReceiptsPaymentsPage = lazy(() => import('../pages/student/ReceiptsPaymentsPage'));
+const CertificatesPage = lazy(() => import('../pages/student/CertificatesPage'));
 
 // ── Admin Pages ──
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'));
 const ManageEventsPage = lazy(() => import('../pages/admin/ManageEventsPage'));
 const EventFormPage = lazy(() => import('../pages/admin/EventFormPage'));
+const ManageCertificatesPage = lazy(() => import('../pages/admin/ManageCertificatesPage'));
 const ManageEventHeadsPage = lazy(() => import('../pages/admin/ManageEventHeadsPage'));
 const ManageMembersPage = lazy(() => import('../pages/admin/ManageMembersPage'));
 const ManageRegistrationsPage = lazy(() => import('../pages/admin/ManageRegistrationsPage'));
@@ -44,6 +45,8 @@ const AdminSettingsPage = lazy(() => import('../pages/admin/AdminSettingsPage'))
 const HomePage = lazy(() => import('../pages/shared/HomePage'));
 const NotFoundPage = lazy(() => import('../pages/shared/NotFoundPage'));
 const UnauthorizedPage = lazy(() => import('../pages/shared/UnauthorizedPage'));
+const AnnouncementDetailPage = lazy(() => import('../pages/shared/AnnouncementDetailPage'));
+const AssociationMembersPage = lazy(() => import('../pages/student/AssociationMembersPage'));
 
 export default function AppRoutes() {
   return (
@@ -51,6 +54,9 @@ export default function AppRoutes() {
       <Routes>
         {/* ── Public Routes ── */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
+        <Route path="/events/:id" element={<EventDetailPage />} />
+        <Route path="/members" element={<AssociationMembersPage />} />
 
         {/* ── Auth Routes ── */}
         <Route element={<AuthLayout />}>
@@ -69,21 +75,29 @@ export default function AppRoutes() {
           <Route path="/my-registrations" element={<MyRegistrationsPage />} />
           <Route path="/profile" element={<StudentProfilePage />} />
           <Route path="/announcements" element={<AnnouncementsPage />} />
-          <Route path="/help-desk" element={<HelpDeskPage />} />
+          <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
+          <Route path="/members" element={<AssociationMembersPage />} />
           <Route path="/receipts-payments" element={<ReceiptsPaymentsPage />} />
         </Route>
 
         {/* ── Admin Routes (Protected + Admin Only) ── */}
         <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/announcements" element={<AnnouncementsPage />} />
           <Route path="/admin/events" element={<ManageEventsPage />} />
           <Route path="/admin/events/new" element={<EventFormPage />} />
           <Route path="/admin/events/:id/edit" element={<EventFormPage />} />
+          <Route path="/admin/certificates" element={<ManageCertificatesPage />} />
           <Route path="/admin/event-heads" element={<ManageEventHeadsPage />} />
           <Route path="/admin/members" element={<ManageMembersPage />} />
           <Route path="/admin/registrations" element={<ManageRegistrationsPage />} />
           <Route path="/admin/students" element={<StudentDirectoryPage />} />
           <Route path="/admin/settings" element={<AdminSettingsPage />} />
+        </Route>
+
+        {/* ── Certificates Access (Public/Student with in-page login or direct access) ── */}
+        <Route element={<StudentLayout />}>
+          <Route path="/certificates" element={<CertificatesPage />} />
         </Route>
 
         {/* ── Error Routes ── */}

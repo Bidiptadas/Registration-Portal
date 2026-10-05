@@ -22,6 +22,7 @@ firebase-service-account.json
 **/firebase-service-account*.json
 *firebase-adminsdk*.json
 serviceaccount.json
+**/serviceaccount.json
 
 # ──── IDE ────
 .vscode/

@@ -1,0 +1,95 @@
+/* Universal App Footer - matches the home page footer exactly */
+.home-footer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  padding: 1.35rem clamp(1.25rem, 7vw, 8rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(8, 31, 42, 0.82);
+  backdrop-filter: blur(14px);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.home-footer h2 {
+  margin-bottom: 0.4rem;
+  color: #f6c85f;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.home-footer p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.home-footer__address {
+  text-align: left;
+}
+
+.home-footer__social {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.home-footer__links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.3rem;
+}
+
+.home-footer__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.home-footer__link:hover {
+  background: transparent;
+  color: #f6c85f;
+  transform: translateX(-3px);
+  text-decoration: none;
+}
+
+.home-footer__icon {
+  flex-shrink: 0;
+  color: #f6c85f;
+}
+
+@media (max-width: 640px) {
+  .home-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .home-footer__social {
+    margin-left: 0;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .home-footer__links {
+    align-items: flex-start;
+  }
+}

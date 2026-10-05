@@ -100,10 +100,9 @@ describe('Firebase authentication service', () => {
   });
 
   it('reports duplicate, wrong-password, missing-user, and rate-limit errors unchanged', async () => {
-    auth.isMock = true;
-    mockStore.set('tp_auth_users', [
-      { uid: 'uid-1', email: 'student@example.com', password: 'ValidPass1!', displayName: 'Student' },
-    ]);
+    firebaseAuth.createUserWithEmailAndPassword.mockRejectedValueOnce({ code: 'auth/email-already-in-use' });
+    firebaseAuth.signInWithEmailAndPassword.mockRejectedValueOnce({ code: 'auth/wrong-password' });
+    firebaseAuth.signInWithEmailAndPassword.mockRejectedValueOnce({ code: 'auth/user-not-found' });
 
     await expect(signUp('student@example.com', 'ValidPass1!', 'Student')).rejects.toMatchObject({
       code: 'auth/email-already-in-use',
@@ -115,12 +114,11 @@ describe('Firebase authentication service', () => {
       code: 'auth/user-not-found',
     });
 
-    auth.isMock = false;
     firebaseAuth.signInWithEmailAndPassword.mockRejectedValue({ code: 'auth/too-many-requests' });
     const rapidAttempts = Array.from({ length: 5 }, () => signIn('student@example.com', 'WrongPass1!'));
     const rapidResults = await Promise.allSettled(rapidAttempts);
 
-    expect(firebaseAuth.signInWithEmailAndPassword).toHaveBeenCalledTimes(5);
+    expect(firebaseAuth.signInWithEmailAndPassword).toHaveBeenCalledTimes(7);
     expect(rapidResults.every((result) => (
       result.status === 'rejected' && result.reason.code === 'auth/too-many-requests'
     ))).toBe(true);
@@ -138,21 +136,27 @@ describe('Firebase authentication service', () => {
     onAuthChange((nextUser) => states.push(nextUser));
     expect(states).toEqual([user, null]);
 
-    auth.isMock = true;
-    auth.currentUser = user;
     await signOut();
-    expect(auth.currentUser).toBeNull();
+    expect(firebaseAuth.signOut).toHaveBeenCalledWith(auth);
   });
 
   it('rehydrates the same user for repeated listeners after refresh or tab restoration', async () => {
-    const user = { uid: 'uid-1', email: 'student@example.com', emailVerified: true };
+    const user = {
+      uid: 'uid-1',
+      email: 'student@example.com',
+      emailVerified: true,
+      getIdToken: vi.fn().mockResolvedValue('mock-id-token-xyz'),
+    };
     const states = [];
-    auth.isMock = true;
     auth.currentUser = user;
+
+    firebaseAuth.onAuthStateChanged.mockImplementation((_auth, callback) => {
+      callback(user);
+      return vi.fn();
+    });
 
     onAuthChange((nextUser) => states.push(nextUser));
     onAuthChange((nextUser) => states.push(nextUser));
-    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(states).toEqual([user, user]);
     await expect(getIdToken()).resolves.toBe('mock-id-token-xyz');
